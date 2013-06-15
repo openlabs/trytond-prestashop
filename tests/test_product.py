@@ -29,10 +29,18 @@ class TestProduct(BaseTestCase):
             with Transaction().set_context(
                     prestashop_site=self.site.id, ps_test=True
                 ):
+                self.setup_sites()
+
                 client = self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.ProductTemplate.search([])), 0)
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 0)
                 self.assertEqual(len(self.Product.search([])), 0)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 0)
 
                 product_data = get_objectified_xml('products', 1)
                 template = self.Product.find_or_create_using_ps_data(
@@ -41,7 +49,13 @@ class TestProduct(BaseTestCase):
                 # This should create a template and two variants where one
                 # is created by template and other by this combination
                 self.assertEqual(len(self.ProductTemplate.search([])), 1)
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 1)
                 self.assertEqual(len(self.Product.search([])), 1)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 1)
 
                 # Try creating the same product again, it should NOT create a
                 # new one and blow with user error due to sql constraint
@@ -65,6 +79,14 @@ class TestProduct(BaseTestCase):
                     self.ProductTemplate.get_template_using_ps_id(1).id
                 )
 
+                # Nothing should be created under site_alt
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('site', '=', self.site_alt.id)
+                ])), 0)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('site', '=', self.site_alt.id)
+                ])), 0)
+
     def test_0020_product_import(self):
         """Test Product import
         """
@@ -75,10 +97,18 @@ class TestProduct(BaseTestCase):
             with Transaction().set_context(
                     prestashop_site=self.site.id, ps_test=True
                 ):
+                self.setup_sites()
+
                 client = self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.ProductTemplate.search([])), 0)
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 0)
                 self.assertEqual(len(self.Product.search([])), 0)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 0)
 
                 product = self.Product.find_or_create_using_ps_data(
                     get_objectified_xml('combinations', 1)
@@ -86,7 +116,13 @@ class TestProduct(BaseTestCase):
                 # This should create a template and two variants where one
                 # is created by template and other by this combination
                 self.assertEqual(len(self.ProductTemplate.search([])), 1)
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 1)
                 self.assertEqual(len(self.Product.search([])), 2)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 2)
 
                 # Try importing the same product again, it should NOT create a
                 # new one.
@@ -108,6 +144,14 @@ class TestProduct(BaseTestCase):
                     product.id,
                     self.Product.get_product_using_ps_id(1).id
                 )
+
+                # Nothing should be created under site_alt
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('site', '=', self.site_alt.id)
+                ])), 0)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('site', '=', self.site_alt.id)
+                ])), 0)
 
 
 def suite():

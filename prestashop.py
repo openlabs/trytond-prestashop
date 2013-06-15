@@ -18,8 +18,8 @@ from trytond.pool import Pool
 from trytond.wizard import Wizard, StateView, Button
 
 
-__all__ = ['Site',
-    'ImportWizardView', 'ImportWizard',
+__all__ = [
+    'Site', 'ImportWizardView', 'ImportWizard',
     'ExportWizardView', 'ExportWizard',
     'ConnectionWizardView', 'ConnectionWizard',
 ]
@@ -97,16 +97,21 @@ class Site(ModelSQL, ModelView):
     def __setup__(cls):
         super(Site, cls).__setup__()
         cls._error_messages.update({
-            'prestashop_settings_missing': \
-                'Prestashop webservice settings are incomplete.',
-            'multiple_sites': \
-                'Test connection can be done for only one site at a time.',
+            'prestashop_settings_missing':
+            'Prestashop webservice settings are incomplete.',
+            'multiple_sites':
+            'Test connection can be done for only one site at a time.',
             'wrong_url_n_key': 'Connection Failed! Please check URL and Key',
             'wrong_url': 'Connection Failed! The URL provided is wrong',
+            'languages_not_imported':
+            'Import the languages before importing order states',
+            'order_states_not_imported': 'Import the order states before '
+            'importing/exporting orders'
         })
         cls._buttons.update({
             'test_connection': {},
-            'setup_site': {},
+            'import_languages': {},
+            'import_order_states': {},
             'import_orders': {},
             'export_orders': {},
         })
@@ -127,11 +132,73 @@ class Site(ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    def setup_site(cls, sites):
-        """Import the languages and order_states from site for the user to
-        map them to tryton languages and tryton sale states
+    def import_languages(cls, sites):
+        """Import Languages from remote and try to link them to tryton
+        languages
+
+        :param sites: List of sites for which the languages are to be imported
+        :returns: List of languages created
         """
-        pass
+        SiteLanguage = Pool().get('prestashop.site.lang')
+
+        if len(sites) != 1:
+            cls.raise_user_error('multiple_sites')
+        site = sites[0]
+
+        # Set this site in context
+        with Transaction().set_context(prestashop_site=site.id):
+
+            client = site.get_prestashop_client()
+            languages = client.languages.get_list(display='full')
+
+            new_records = []
+            for lang in languages:
+                # If the language already exists in `Languages`, skip and do
+                # not create it again
+                if SiteLanguage.search_using_ps_id(lang.id.pyval):
+                    continue
+                new_records.append(
+                    SiteLanguage.create_site_lang_using_ps_data(lang)
+                )
+
+        return new_records
+
+    @classmethod
+    @ModelView.button
+    def import_order_states(cls, sites):
+        """Import Order States from remote and try to link them to tryton
+        order states
+
+        :returns: List of order states created
+        """
+        SiteOrderState = Pool().get('prestashop.site.order_state')
+
+        if len(sites) != 1:
+            cls.raise_user_error('multiple_sites')
+        site = sites[0]
+
+        # Set this site to context
+        with Transaction().set_context(prestashop_site=site.id):
+
+            # If site languages don't exist, then raise an error
+            if not site.languages:
+                cls.raise_user_error('languages_not_imported')
+
+            client = site.get_prestashop_client()
+            order_states = client.order_states.get_list(display='full')
+
+            new_records = []
+            for state in order_states:
+                # If this order state already exists for this site, skip and do
+                # not create it again
+                if SiteOrderState.search_using_ps_id(state.id.pyval):
+                    continue
+
+                new_records.append(
+                    SiteOrderState.create_site_order_state_using_ps_data(state)
+                )
+
+        return new_records
 
     @classmethod
     @ModelView.button_action('prestashop.wizard_prestashop_connection')
@@ -147,12 +214,12 @@ class Site(ModelSQL, ModelView):
             # Try getting the list of shops
             # If it fails with prestashop error, then raise error
             client.shops.get_list()
-        except pystashop.PrestaShopWebserviceException, exc:
+        except pystashop.PrestaShopWebserviceException:
             cls.raise_user_error('wrong_url_n_key')
         except (
-                requests.exceptions.MissingSchema,
-                requests.exceptions.ConnectionError
-            ), exc:
+            requests.exceptions.MissingSchema,
+            requests.exceptions.ConnectionError
+        ):
             cls.raise_user_error('wrong_url')
 
     @classmethod
@@ -165,7 +232,13 @@ class Site(ModelSQL, ModelView):
         ..note:: This method is usually called by the cron
         """
         # TODO: In future it should be possible to call each site separately.
-        pass
+        if not sites:
+            sites = cls.search([
+                ('company', '=', Transaction().context.get('company'))
+            ])
+
+        for site in sites:
+            site.import_orders_from_prestashop_site()
 
     @classmethod
     @ModelView.button_action('prestashop.wizard_prestashop_import')
@@ -184,7 +257,47 @@ class Site(ModelSQL, ModelView):
 
         :returns: The list of active records of sales imported
         """
-        pass
+        Sale = Pool().get('sale.sale')
+        Site = Pool().get('prestashop.site')
+
+        if not self.order_states:
+            self.raise_user_error('order_states_not_imported')
+
+        # Localize to the site timezone
+        utc_time_now = datetime.utcnow()
+        site_tz = pytz.timezone(self.timezone)
+        time_now = site_tz.normalize(pytz.utc.localize(utc_time_now))
+        client = self.get_prestashop_client()
+
+        with Transaction().set_context(prestashop_site=self.id):
+            if self.last_order_import_time:
+                # In tryton all time stored is in UTC
+                # Convert the last import time to timezone of the site
+                last_order_import_time = site_tz.normalize(
+                    pytz.utc.localize(self.last_order_import_time)
+                )
+                orders_to_import = client.orders.get_list(
+                    filters={
+                        'date_upd': '{0},{1}'.format(
+                            last_order_import_time.strftime(
+                                '%Y-%m-%d %H:%M:%S'
+                            ),
+                            time_now.strftime('%Y-%m-%d %H:%M:%S')
+                        )
+                    }, date=1, display='full'
+                )
+            else:
+                # FIXME: This wont scale if there are thousands of orders
+                orders_to_import = client.orders.get_list(display='full')
+
+            Site.write([self], {
+                'last_order_import_time': utc_time_now
+            })
+            sales_imported = []
+            for order in orders_to_import:
+                sales_imported.append(Sale.find_or_create_using_ps_data(order))
+
+        return sales_imported
 
     @classmethod
     def export_orders_to_prestashop(cls, sites=None):
@@ -195,7 +308,13 @@ class Site(ModelSQL, ModelView):
 
         ..note:: This method is usually called by the cron
         """
-        pass
+        if not sites:
+            sites = cls.search([
+                ('company', '=', Transaction().context.get('company'))
+            ])
+
+        for site in sites:
+            site.export_orders_to_prestashop_for_site()
 
     @classmethod
     @ModelView.button_action('prestashop.wizard_prestashop_export')
@@ -214,7 +333,45 @@ class Site(ModelSQL, ModelView):
 
         :returns: The list of active records of sales exported
         """
-        pass
+        Sale = Pool().get('sale.sale')
+        Site = Pool().get('prestashop.site')
+        Move = Pool().get('stock.move')
+
+        if not self.order_states:
+            self.raise_user_error('order_states_not_imported')
+
+        time_now = datetime.utcnow()
+
+        with Transaction().set_context(prestashop_site=self.id):
+            if self.last_order_export_time:
+                # Sale might not get updated for state changes in the related
+                # shipments.
+                # So first get the moves for outgoing shipments which are \
+                # executed after last import time.
+                moves = Move.search([
+                    ('write_date', '>=', self.last_order_export_time),
+                    ('sale.prestashop_site', '=', self.id),
+                    ('shipment', 'like', 'stock.shipment.out%')
+                ])
+                sales_to_export = Sale.search(['OR', [
+                    ('write_date', '>=', self.last_order_export_time),
+                    ('prestashop_site', '=', self.id),
+                ], [
+                    ('id', 'in', map(int, [m.sale for m in moves]))
+                ]])
+            else:
+                sales_to_export = Sale.search([
+                    ('prestashop_site', '=', self.id),
+                ])
+
+            Site.write([self], {
+                'last_order_export_time': time_now
+            })
+
+            for sale in sales_to_export:
+                sale.export_status_to_ps()
+
+        return sales_to_export
 
 
 class ConnectionWizardView(ModelView):
@@ -266,7 +423,16 @@ class ImportWizard(Wizard):
 
         :param fields: Wizard fields
         """
-        pass
+        Site = Pool().get('prestashop.site')
+
+        site = Site(Transaction().context['active_id'])
+
+        default = {
+            'orders_imported': len(
+                site.import_orders_from_prestashop_site()
+            )}
+
+        return default
 
 
 class ExportWizardView(ModelView):
@@ -293,4 +459,13 @@ class ExportWizard(Wizard):
 
         :param fields: Wizard fields
         """
-        pass
+        Site = Pool().get('prestashop.site')
+
+        site = Site(Transaction().context['active_id'])
+
+        default = {
+            'orders_exported': len(
+                site.export_orders_to_prestashop_site()
+            )}
+
+        return default

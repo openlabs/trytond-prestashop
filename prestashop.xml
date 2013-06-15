@@ -30,6 +30,7 @@
             <field name="arch" type="xml">
                 <![CDATA[
                     <tree string="Prestashop Site Languages">
+                        <field name="name" />
                         <field name="language" />
                         <field name="site" />
                     </tree>
@@ -98,17 +99,21 @@
                         <newline/>
                         <notebook colspan="4">
                             <page string="Languages" id="languages">
-                                <field name="languages" mode="form,tree" colspan="4"/>
+                                <field name="languages" mode="tree,form" colspan="4"/>
                             </page>
                             <page string="Order States" id="order_states">
-                                <field name="order_states" mode="form,tree" colspan="4"/>
+                                <field name="order_states" mode="tree,form" colspan="4"/>
                             </page>
                         </notebook>
                         <newline/>
-                        <button name="test_connection" string="Test Connection"
-                                colspan="2"/>
-                        <button name="setup_site" string="Setup Site"
-                                colspan="2"/>
+                        <group id="grp_button" col="6" colspan="4">
+                            <button name="test_connection" string="Test Connection"
+                                    colspan="2"/>
+                            <button name="import_languages" string="Import Languages"
+                                    colspan="2"/>
+                            <button name="import_order_states" string="Import Order States"
+                                    colspan="2"/>
+                        </group>
                         <newline/>
                         <button name="import_orders"
                                 string="Import Orders" colspan="2"/>

@@ -28,25 +28,41 @@ class TestSale(BaseTestCase):
             with Transaction().set_context(
                     prestashop_site=self.site.id, ps_test=True
                 ):
+                self.setup_sites()
+
                 client = self.site.get_prestashop_client()
 
-                self.assertEqual(len(self.Sale.search([])), 0)
-                self.assertEqual(len(self.Party.search([])), 1)
-                self.assertEqual(len(self.Address.search([])), 1)
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 0)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 0)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
 
                 order_data = get_objectified_xml('orders', 1)
 
                 self.Sale.find_or_create_using_ps_data(order_data)
-                self.assertEqual(len(self.Sale.search([])), 1)
-                self.assertEqual(len(self.Party.search([])), 2)
-                self.assertEqual(len(self.Address.search([])), 2)
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
 
                 # Try importing the same sale again, it should NOT create a
                 # new one.
                 self.Sale.find_or_create_using_ps_data(order_data)
-                self.assertEqual(len(self.Sale.search([])), 1)
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
 
                 # Creating the order again should blow up with a usererror
                 # due to sql constraints
@@ -55,7 +71,9 @@ class TestSale(BaseTestCase):
                     self.Sale.create_using_ps_data, order_data
                 )
 
-                sale, = self.Sale.search([])
+                sale, = self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])
 
                 # Test getting sale using prestashop data
                 self.assertEqual(
@@ -69,6 +87,11 @@ class TestSale(BaseTestCase):
                     sale.total_amount,
                     Decimal(str(order_data.total_paid_tax_excl))
                 )
+
+                # Sale should be created under site_alt
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site_alt.id)
+                ])), 0)
 
 
 def suite():

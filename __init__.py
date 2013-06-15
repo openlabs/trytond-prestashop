@@ -35,7 +35,7 @@ def register():
         ProductPrestashop,
         Sale,
         SaleLine,
-        PrestashopSiteOrderState,
+        SiteOrderState,
         module='prestashop', type_='model')
     Pool.register(
         ImportWizard,
