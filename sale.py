@@ -274,7 +274,8 @@ class Sale:
             client.addresses.get(order_record.id_address_delivery.pyval),
         )
         sale_data = {
-            'reference': order_record.reference.pyval,
+            'reference': order_record.id.pyval,
+            'description': order_record.reference.pyval,
             'sale_date': sale_time_utc.date(),
             'party': party.id,
             'invoice_address': inv_address.id,
@@ -366,7 +367,30 @@ class Sale:
         state in Tryton.
 
         """
-        pass
+        SiteOrderState = Pool().get('prestashop.site.order_state')
+
+        client = self.prestashop_site.get_prestashop_client()
+        def get_state(state_id):
+            "Returns the id of prestashop state corresponding to tryton state"
+            return client.order_states.get_list(
+                filters={'id': state_id}, as_ids=True
+            )[0]
+
+        # Get the corresponding PS state from site order states as the state
+        # of state
+        site_order_state = SiteOrderState.search([
+            ('order_state', '=', 'sale.' + self.state)
+        ])
+        if not site_order_state:
+            return
+        else:
+            prestashop_state = get_state(site_order_state[0].prestashop_id)
+
+        order = client.orders.get(self.prestashop_id)
+        order.current_state = prestashop_state
+        result = client.orders.update(order.id, order)
+
+        return result.order
 
 
 class SaleLine:
