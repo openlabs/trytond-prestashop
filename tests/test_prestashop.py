@@ -311,7 +311,7 @@ class TestPrestashop(BaseTestCase):
                 # Import a language
                 # This is english language with code just as `en`
                 lang_data = get_objectified_xml('languages', 1)
-                lang = self.LangPrestashop.create_site_lang_using_ps_data(
+                lang = self.LangPrestashop.create_using_ps_data(
                     lang_data
                 )
 
@@ -325,7 +325,7 @@ class TestPrestashop(BaseTestCase):
                 # Import another language
                 # This is french with code as fr-FR
                 lang_data = get_objectified_xml('languages', 2)
-                lang = self.LangPrestashop.create_site_lang_using_ps_data(
+                lang = self.LangPrestashop.create_using_ps_data(
                     lang_data
                 )
 
@@ -359,7 +359,7 @@ class TestPrestashop(BaseTestCase):
                 # Create a state
                 state_data = get_objectified_xml('order_states', 1)
                 state = self.PrestashopOrderState.\
-                    create_site_order_state_using_ps_data(
+                    create_using_ps_data(
                         state_data
                     )
 

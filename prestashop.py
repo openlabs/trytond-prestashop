@@ -158,7 +158,7 @@ class Site(ModelSQL, ModelView):
                 if SiteLanguage.search_using_ps_id(lang.id.pyval):
                     continue
                 new_records.append(
-                    SiteLanguage.create_site_lang_using_ps_data(lang)
+                    SiteLanguage.create_using_ps_data(lang)
                 )
 
         return new_records
@@ -195,7 +195,7 @@ class Site(ModelSQL, ModelView):
                     continue
 
                 new_records.append(
-                    SiteOrderState.create_site_order_state_using_ps_data(state)
+                    SiteOrderState.create_using_ps_data(state)
                 )
 
         return new_records

@@ -22,16 +22,14 @@ class TestProduct(BaseTestCase):
     def test_0010_product_template_import(self):
         """Test Product Template import
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    prestashop_site=self.site.id, ps_test=True
-                ):
+                prestashop_site=self.site.id, ps_test=True,
+            ):
                 self.setup_sites()
-
-                client = self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.ProductTemplate.search([])), 0)
                 self.assertEqual(len(self.TemplatePrestashop.search([
@@ -43,7 +41,7 @@ class TestProduct(BaseTestCase):
                 ])), 0)
 
                 product_data = get_objectified_xml('products', 1)
-                template = self.Product.find_or_create_using_ps_data(
+                template = self.ProductTemplate.find_or_create_using_ps_data(
                     product_data
                 )
                 # This should create a template and two variants where one
@@ -57,13 +55,33 @@ class TestProduct(BaseTestCase):
                     ('site', '=', self.site.id)
                 ])), 1)
 
+                # Product name should be in english and french
+                with Transaction().set_context(language='en_US'):
+                    template = self.ProductTemplate(template.id)
+                    self.assertEqual(
+                        template.name, 'iPod Nano'
+                    )
+                with Transaction().set_context(language='fr_FR'):
+                    template = self.ProductTemplate(template.id)
+                    self.assertEqual(
+                        template.name, 'iPod Nano French'
+                    )
+
+                # Product description should be in english only
+                with Transaction().set_context(language='en_US'):
+                    product_desc_en = self.Product(
+                        template.products[0].id).description
+                with Transaction().set_context(language='fr_FR'):
+                    product_desc_fr = self.Product(
+                        template.products[0].id).description
+                self.assertEqual(product_desc_en, product_desc_fr)
+
                 # Try creating the same product again, it should NOT create a
                 # new one and blow with user error due to sql constraint
                 self.assertRaises(
                     UserError,
-                    self.Product.create_using_ps_data, product_data
+                    self.ProductTemplate.create_using_ps_data, product_data
                 )
-                self.assertEqual(len(self.Product.search([])), 1)
 
                 # Get template using prestashop data
                 self.assertEqual(
@@ -90,16 +108,14 @@ class TestProduct(BaseTestCase):
     def test_0020_product_import(self):
         """Test Product import
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    prestashop_site=self.site.id, ps_test=True
-                ):
+                prestashop_site=self.site.id, ps_test=True,
+            ):
                 self.setup_sites()
-
-                client = self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.ProductTemplate.search([])), 0)
                 self.assertEqual(len(self.TemplatePrestashop.search([
@@ -135,7 +151,7 @@ class TestProduct(BaseTestCase):
                 self.assertEqual(
                     product.id,
                     self.Product.get_product_using_ps_data(
-                        product_data
+                        get_objectified_xml('combinations', 1)
                     ).id
                 )
 

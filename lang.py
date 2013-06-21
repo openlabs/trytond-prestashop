@@ -78,7 +78,7 @@ class SiteLanguage(ModelSQL, ModelView):
         return site_langs and site_langs[0] or None
 
     @classmethod
-    def create_site_lang_using_ps_data(cls, lang_record):
+    def create_using_ps_data(cls, lang_record):
         """Create a record in `prestashop.site.lang` with the languages
         corresponding to prestashop_id
 
@@ -151,7 +151,7 @@ class Language:
         if not site_language:
             site = Site(Transaction().context.get('prestashop_site'))
             client = site.get_prestashop_client()
-            site_language = [SiteLanguage.create_site_lang_using_ps_data(
+            site_language = [SiteLanguage.create_using_ps_data(
                 client.languages.get(prestashop_id)
             )]
 

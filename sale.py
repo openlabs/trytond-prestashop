@@ -96,7 +96,7 @@ class SiteOrderState(ModelSQL, ModelView):
             return 'sale.confirmed'
 
     @classmethod
-    def create_site_order_state_using_ps_data(cls, state_data):
+    def create_using_ps_data(cls, state_data):
         """Create a record for the order state corresponding to state_data
 
         :param state_data: Objectified XML data for order state
@@ -128,6 +128,7 @@ class SiteOrderState(ModelSQL, ModelView):
 
         # If there is only lang, control wont go to this loop
         for name_in_lang in name_in_langs:
+            # Write the name in other languages
             site_lang = SiteLanguage.search_using_ps_id(
                 int(name_in_lang.get('id'))
             )
