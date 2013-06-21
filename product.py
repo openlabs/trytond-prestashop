@@ -7,7 +7,7 @@
 """
 from decimal import Decimal
 
-from trytond.model import ModelSQL, fields
+from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import PoolMeta, Pool
 from trytond.transaction import Transaction
 
@@ -16,7 +16,7 @@ __all__ = ['Product', 'Template', 'TemplatePrestashop', 'ProductPrestashop']
 __metaclass__ = PoolMeta
 
 
-class TemplatePrestashop(ModelSQL):
+class TemplatePrestashop(ModelSQL, ModelView):
     """Product Template - Prestashop site store
 
     A template can be available on more than one sites on prestashop as product
@@ -236,7 +236,7 @@ class Template:
         return records and records[0].template or None
 
 
-class ProductPrestashop(ModelSQL):
+class ProductPrestashop(ModelSQL, ModelView):
     """Product Variant - Prestashop site store
 
     A product variant can be available on more than one sites on prestashop

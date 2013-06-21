@@ -274,7 +274,7 @@ class Sale:
             client.addresses.get(order_record.id_address_delivery.pyval),
         )
         sale_data = {
-            'reference': order_record.id.pyval,
+            'reference': str(order_record.id.pyval),
             'description': order_record.reference.pyval,
             'sale_date': sale_time_utc.date(),
             'party': party.id,
