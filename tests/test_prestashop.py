@@ -53,9 +53,8 @@ def get_objectified_xml(resource, filename):
                      extension. It will be an integer value
     :returns: Objectified XML of the file read.
     """
-    root_xml_path = os.path.join(
-        os.path.split(os.path.abspath(__file__))[0], 'xml', PS_VERSION
-    )
+    root_xml_folder = pkg_resources.resource_filename('mockstashop', 'xml')
+    root_xml_path = os.path.join(root_xml_folder, PS_VERSION)
 
     file_path = os.path.join(root_xml_path, resource, str(filename)) + '.xml'
 
