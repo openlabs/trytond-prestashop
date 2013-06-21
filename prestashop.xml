@@ -50,6 +50,11 @@
                         <field name="order_state" />
                         <label name="site" />
                         <field name="site" />
+                        <separator string="Configuration" id="sepr_config"/>
+                        <label name="invoice_method" />
+                        <field name="invoice_method" />
+                        <label name="shipment_method" />
+                        <field name="shipment_method" />
                     </form>
                 ]]>
             </field>

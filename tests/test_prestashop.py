@@ -198,6 +198,8 @@ class BaseTestCase(unittest.TestCase):
             create_chart.properties.company = self.company
             create_chart.properties.account_receivable = receivable
             create_chart.properties.account_payable = payable
+            create_chart.properties.account_revenue = revenue
+            create_chart.properties.account_expense = expense
             create_chart.transition_create_properties()
 
             self.Party.write(

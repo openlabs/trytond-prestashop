@@ -65,13 +65,43 @@ class Currency:
         :param prestashop_id: Prestashop ID for the currency
         :returns: Active record of the currency
         """
-        pass
+        CurrencyPrestashop = Pool().get('currency.currency.prestashop')
 
-    def cache_prestashop_id(self, prestashop_id):
+        records = CurrencyPrestashop.search([
+            ('site', '=', Transaction().context.get('prestashop_site')),
+            ('prestashop_id', '=', prestashop_id)
+        ])
+
+        if records:
+            return records[0].currency
+        # Currency is not cached yet, cache it and return
+        return cls.cache_prestashop_id(prestashop_id)
+
+    @classmethod
+    def cache_prestashop_id(cls, prestashop_id):
         """Cache the value of currency corresponding to the prestashop_id
         by creating a record in the cache model
 
         :param prestashop_id: Prestashop ID
         :returns: Active record of the currency cached
         """
-        pass
+        Site = Pool().get('prestashop.site')
+        CurrencyPrestashop = Pool().get('currency.currency.prestashop')
+
+        site = Site(Transaction().context.get('prestashop_site'))
+        client = site.get_prestashop_client()
+
+        currency_data = client.currencies.get(prestashop_id)
+        currency = cls.search([('code', '=', currency_data.iso_code.pyval)])
+
+        if not currency:
+            cls.raise_user_error(
+                'currency_not_found', (currency_data.iso_code.pyval,)
+            )
+        CurrencyPrestashop.create([{
+            'currency': currency[0].id,
+            'site': site.id,
+            'prestashop_id': prestashop_id,
+        }])
+
+        return currency and currency[0] or None
