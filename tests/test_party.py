@@ -154,7 +154,7 @@ class TestParty(BaseTestCase):
                     )
                 self.assertEqual(len(self.Address.search([
                     ('party.prestashop_site', '=', self.site.id)
-                ])), 3)
+                ])), 2)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
                 self.assertEqual(len(self.CountryPrestashop.search([
                     ('site', '=', self.site.id)

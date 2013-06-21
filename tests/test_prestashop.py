@@ -122,6 +122,13 @@ class BaseTestCase(unittest.TestCase):
             }
         ])
 
+        self.Subdivision.create([{
+            'name': 'Alabama',
+            'code': 'US-AL',
+            'country': us.id,
+            'type': 'state',
+        }])
+
         with Transaction().set_context(company=None):
             self.company_party, = self.Party.create([{
                 'name': 'Openlabs',

@@ -40,9 +40,6 @@ class CountryPrestashop(ModelSQL):
     @classmethod
     def __setup__(cls):
         super(CountryPrestashop, cls).__setup__()
-        cls._error_messages.update({
-            'country_not_found': 'Country with code %s not found',
-        })
         cls._sql_constraints += [
             ('prestashop_id_site_uniq',
                 'UNIQUE(prestashop_id, site)',
@@ -77,9 +74,6 @@ class SubdivisionPrestashop(ModelSQL):
     @classmethod
     def __setup__(cls):
         super(SubdivisionPrestashop, cls).__setup__()
-        cls._error_messages.update({
-            'subdivision_not_found': 'Subdivision with code %s not found',
-        })
         cls._sql_constraints += [
             ('prestashop_id_site_uniq',
                 'UNIQUE(prestashop_id, site)',
@@ -93,6 +87,13 @@ class Country:
     __name__ = 'country.country'
 
     @classmethod
+    def __setup__(cls):
+        super(Country, cls).__setup__()
+        cls._error_messages.update({
+            'country_not_found': 'Country with code %s not found',
+        })
+
+    @classmethod
     def get_using_ps_id(cls, prestashop_id):
         """Return the country corresponding to the prestashop_id for the
         current site in context
@@ -102,21 +103,58 @@ class Country:
         :param prestashop_id: Prestashop ID for the country
         :returns: Active record of the country
         """
-        pass
+        CountryPrestashop = Pool().get('country.country.prestashop')
 
-    def cache_prestashop_id(self, prestashop_id):
+        records = CountryPrestashop.search([
+            ('site', '=', Transaction().context.get('prestashop_site')),
+            ('prestashop_id', '=', prestashop_id)
+        ])
+
+        if records:
+            return records[0].country
+        # Country is not cached yet, cache it and return
+        return cls.cache_prestashop_id(prestashop_id)
+
+    @classmethod
+    def cache_prestashop_id(cls, prestashop_id):
         """Cache the value of country corresponding to the prestashop_id
         by creating a record in the cache model
 
         :param prestashop_id: Prestashop ID
         :returns: Active record of the country cached
         """
-        pass
+        CountryPrestashop = Pool().get('country.country.prestashop')
+        Site = Pool().get('prestashop.site')
+
+        site = Site(Transaction().context.get('prestashop_site'))
+        client = site.get_prestashop_client()
+
+        country_data = client.countries.get(prestashop_id)
+        country = cls.search([('code', '=', country_data.iso_code.pyval)])
+
+        if not country:
+            cls.raise_user_error(
+                'country_not_found', (country_data.iso_code.pyval,)
+            )
+        CountryPrestashop.create([{
+            'country': country[0].id,
+            'site': site.id,
+            'prestashop_id': prestashop_id,
+        }])
+
+        return country and country[0] or None
 
 
 class Subdivision:
     "Subdivision"
     __name__ = 'country.subdivision'
+
+    @classmethod
+    def __setup__(cls):
+        super(Subdivision, cls).__setup__()
+        cls._error_messages.update({
+            'subdivision_not_found': 'Subdivision with code %s not found',
+        })
 
     @classmethod
     def get_using_ps_id(cls, prestashop_id):
@@ -128,13 +166,51 @@ class Subdivision:
         :param prestashop_id: Prestashop ID for the subdivision
         :returns: Active record of the subdivision
         """
-        pass
+        SubdivisionPrestashop = Pool().get('country.subdivision.prestashop')
 
-    def cache_prestashop_id(self, prestashop_id):
+        records = SubdivisionPrestashop.search([
+            ('site', '=', Transaction().context.get('prestashop_site')),
+            ('prestashop_id', '=', prestashop_id)
+        ])
+
+        if records:
+            return records[0].subdivision
+        # Subdivision is not cached yet, cache it and return
+        return cls.cache_prestashop_id(prestashop_id)
+
+    @classmethod
+    def cache_prestashop_id(cls, prestashop_id):
         """Cache the value of subdivision corresponding to the prestashop_id
         by creating a record in the cache model
 
         :param prestashop_id: Prestashop ID
         :returns: Active record of the subdivision cached
         """
-        pass
+        SubdivisionPrestashop = Pool().get('country.subdivision.prestashop')
+        Country = Pool().get('country.country')
+        Site = Pool().get('prestashop.site')
+
+        site = Site(Transaction().context.get('prestashop_site'))
+        client = site.get_prestashop_client()
+
+        state_data = client.states.get(prestashop_id)
+        # The country should have been cached till now for sure
+        country = Country.get_using_ps_id(state_data.id_country.pyval)
+        subdivision = cls.search([
+            ('code', '=', country.code + '-' + state_data.iso_code.pyval)
+        ])
+
+        if not subdivision:
+            cls.raise_user_error(
+                'subdivision_not_found', (
+                    country.code + '-' + state_data.iso_code.pyval,
+                )
+            )
+
+        SubdivisionPrestashop.create([{
+            'subdivision': subdivision[0].id,
+            'site': site.id,
+            'prestashop_id': prestashop_id,
+        }])
+
+        return subdivision and subdivision[0] or None
