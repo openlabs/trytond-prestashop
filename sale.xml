@@ -24,5 +24,20 @@ this repository contains the full copyright notices and license terms. -->
             </field>
         </record>
 
+        <record model="ir.ui.view" id="sale_view_tree">
+            <field name="model">sale.sale</field>
+            <field name="inherit" ref="sale.sale_view_tree"/>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <data>
+                    <xpath
+                        expr="/tree" position="inside">
+                          <field name="prestashop_site"/>
+                    </xpath>
+                </data>
+                ]]>
+            </field>
+        </record>
+
     </data>
 </tryton>
