@@ -72,7 +72,9 @@ class Party:
                 customer_record.lastname.pyval
             ]),
             'prestashop_id': customer_record.id.pyval,
-            'lang': Language.get_using_ps_id(customer_record.id_lang.pyval).id,
+            'lang': Language.get_using_ps_id(
+                customer_record.id_lang.pyval
+            ).id if hasattr(customer_record, 'id_lang') else None,
             'contact_mechanisms': [('create', [{
                 'type': 'email',
                 'value': customer_record.email.pyval,
