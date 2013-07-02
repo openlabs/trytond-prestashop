@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>How it works &mdash; Tryton Prestashop Integration 2.8.0.1dev documentation</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '2.8.0.1dev',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Tryton Prestashop Integration 2.8.0.1dev documentation" href="index.html" />
+    <link rel="prev" title="Dealing with Tryton Crons" href="dealing-with-crons.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="dealing-with-crons.html" title="Dealing with Tryton Crons"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Tryton Prestashop Integration 2.8.0.1dev documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="how-it-works">
+<h1>How it works<a class="headerlink" href="#how-it-works" title="Permalink to this headline">¶</a></h1>
+<p>This section explains how the import and export of orders between Tryton
+and Prestashop works.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">All the data represented below is demo data and is only for
+demonstration purposes.</p>
+</div>
+<div class="section" id="orders-are-imported-as-sales">
+<span id="import-orders"></span><h2>Orders are imported as Sales<a class="headerlink" href="#orders-are-imported-as-sales" title="Permalink to this headline">¶</a></h2>
+<p>Orders placed in Prestashop are imported in Tryton. This is
+periodically done by the Tryton CRON system. The default interval
+between two imports is a day, but the interval
+<a class="reference internal" href="configuration.html#prestashop-crons"><em>can be modified</em></a> to your requirements.</p>
+<p>An order in prestashop has a number of entities related and they are
+imported in tryton as described below:</p>
+<ul class="simple">
+<li>The Order is imported as a Sale. The sale in tryton can be identified by
+the reference which will be same as the order reference in prestashop.
+Internally the matching is done using the ID of the order as returned by
+prestashop.</li>
+<li>The Customer who placed the order is imported as Party. If the customer
+already exists in Tryton, then the same customer(party) is linked with the
+order.</li>
+<li>The invoice and shipping addresses specified by the customer while
+placing the order are imported as addresses, and assigned to the sale order&#8217;s
+billing and shipment addresses. If these addresses exist in Tryton, then the
+same addresses are used else new address(es) for the Party is(are) created.</li>
+<li>The product lines, i.e., the products bought in the order by the
+customer are imported as Sale lines. The product in each of these lines is
+created as product in tryton, if it does not already exist.</li>
+<li>Discount on order is imported as a sale line in tryton with negative
+value.</li>
+<li>Shipping is imported as a sale line in tryton with the price as the
+shipping value on order in prestashop.</li>
+<li>Taxes are imported as taxes in tryton with the same details as on
+prestashop and then are linked to the tax lines on the product [TODO]</li>
+<li>The state of an order from prestashop to tryton is imported as:<ul>
+<li>If the order in prestashop is paid and shipped, it will be imported in
+tryton as a <cite>done</cite> order with all the processes already done.
+To achieve this, the order&#8217;s invoicing method and shipping method are set to
+manual and no invoice or shipment is created.</li>
+<li>If the order in prestashop is paid but not shipped, it will be
+imported in tryton as <cite>processing</cite> with invoicing being done but not
+shipped.</li>
+<li>If the order in prestashop is neither paid nor shipped, it will be
+imported as <cite>confirmed</cite> with no invoice and no shipment.</li>
+</ul>
+</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">When the order import happens next time, the status of the
+orders in <cite>processing</cite> and <cite>confirmed</cite> state in tryton in tryton will be
+updated if there is a change in state on Prestashop. [TODO]</p>
+</div>
+<p><strong>Orders in Prestashop</strong></p>
+<a class="reference internal image-reference" href="_images/orders-in-ps.png"><img alt="_images/orders-in-ps.png" src="_images/orders-in-ps.png" style="width: 900px;" /></a>
+<p><strong>Orders imported as Sales in Tryton</strong></p>
+<div class="line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">Menu:</span> <span class="pre">Sales</span> <span class="pre">&gt;</span> <span class="pre">Sales</span></tt></div>
+</div>
+<a class="reference internal image-reference" href="_images/orders-in-tryton.png"><img alt="_images/orders-in-tryton.png" src="_images/orders-in-tryton.png" style="width: 900px;" /></a>
+<p><strong>Order View in Prestashop</strong></p>
+<a class="reference internal image-reference" href="_images/order-in-ps.png"><img alt="_images/order-in-ps.png" src="_images/order-in-ps.png" style="width: 900px;" /></a>
+<p><strong>Sale in Tryton</strong></p>
+<a class="reference internal image-reference" href="_images/order-in-tryton.png"><img alt="_images/order-in-tryton.png" src="_images/order-in-tryton.png" style="width: 900px;" /></a>
+<p>This import will also create/update parties and products corresponding to
+customer and products in the order on prestashop.</p>
+<p><strong>Customer in Prestashop</strong></p>
+<a class="reference internal image-reference" href="_images/customer-in-ps.png"><img alt="_images/customer-in-ps.png" src="_images/customer-in-ps.png" style="width: 900px;" /></a>
+<p><strong>Party in Tryton</strong></p>
+<a class="reference internal image-reference" href="_images/party-in-tryton.png"><img alt="_images/party-in-tryton.png" src="_images/party-in-tryton.png" style="width: 900px;" /></a>
+<p><strong>Product in Prestashop</strong></p>
+<a class="reference internal image-reference" href="_images/product-in-ps.png"><img alt="_images/product-in-ps.png" src="_images/product-in-ps.png" style="width: 900px;" /></a>
+<p><strong>Product in Tryton</strong></p>
+<a class="reference internal image-reference" href="_images/product-in-tryton.png"><img alt="_images/product-in-tryton.png" src="_images/product-in-tryton.png" style="width: 900px;" /></a>
+</div>
+<div class="section" id="exporting-order-status-from-tryton-to-prestashop">
+<span id="export-orders"></span><h2>Exporting Order Status from Tryton to Prestashop<a class="headerlink" href="#exporting-order-status-from-tryton-to-prestashop" title="Permalink to this headline">¶</a></h2>
+<p>Once the order is processed in Tryton, the shipping status of the order
+based on delivery and picking is updated on prestashop. This is
+periodically done by the Tryton CRON system. The default interval
+between two exports is a day, but <a class="reference internal" href="configuration.html#prestashop-crons"><em>can be modified</em></a>
+to your requirements.</p>
+<ul class="simple">
+<li>The status of orders which are imported as <cite>processing</cite> in Tryton will be
+exported to Prestashop as <cite>Delivered</cite> once they are marked <cite>shipped</cite> and
+<cite>done</cite> in Tryton.</li>
+<li>The status of orders which are imported as <cite>confirmed</cite> in Tryton will be
+exported to prestashop as <cite>Payment accepted</cite> when they are invoiced and
+<cite>paid</cite> in tryton. These will be also be marked as <cite>Delivered</cite> if they
+are marked <cite>shipped</cite> in Tryton.</li>
+</ul>
+<p><strong>Order processed in Tryton</strong></p>
+<a class="reference internal image-reference" href="_images/order-processed-in-tryton.png"><img alt="_images/order-processed-in-tryton.png" src="_images/order-processed-in-tryton.png" style="width: 900px;" /></a>
+<p><strong>Order Status exported to Prestashop</strong></p>
+<a class="reference internal image-reference" href="_images/order-status-in-ps.png"><img alt="_images/order-status-in-ps.png" src="_images/order-status-in-ps.png" style="width: 900px;" /></a>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">How it works</a><ul>
+<li><a class="reference internal" href="#orders-are-imported-as-sales">Orders are imported as Sales</a></li>
+<li><a class="reference internal" href="#exporting-order-status-from-tryton-to-prestashop">Exporting Order Status from Tryton to Prestashop</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="dealing-with-crons.html"
+                        title="previous chapter">Dealing with Tryton Crons</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/how-it-works.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="dealing-with-crons.html" title="Dealing with Tryton Crons"
+             >previous</a> |</li>
+        <li><a href="index.html">Tryton Prestashop Integration 2.8.0.1dev documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Openlabs Technologies &amp; Consulting (P) Ltd..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

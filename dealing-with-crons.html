@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Dealing with Tryton Crons &mdash; Tryton Prestashop Integration 2.8.0.1dev documentation</title>
+    
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '2.8.0.1dev',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Tryton Prestashop Integration 2.8.0.1dev documentation" href="index.html" />
+    <link rel="next" title="How it works" href="how-it-works.html" />
+    <link rel="prev" title="Configuring Prestashop settings" href="configuration.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="how-it-works.html" title="How it works"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="configuration.html" title="Configuring Prestashop settings"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Tryton Prestashop Integration 2.8.0.1dev documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="dealing-with-tryton-crons">
+<h1>Dealing with Tryton Crons<a class="headerlink" href="#dealing-with-tryton-crons" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="accessing-crons">
+<span id="id1"></span><h2>Accessing Crons<a class="headerlink" href="#accessing-crons" title="Permalink to this headline">¶</a></h2>
+<div class="line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">Menu:</span> <span class="pre">Administration</span> <span class="pre">&gt;</span> <span class="pre">Scheduler</span> <span class="pre">&gt;</span> <span class="pre">Scheduled</span> <span class="pre">Actions</span></tt></div>
+</div>
+<blockquote>
+<div><a class="reference internal image-reference" href="_images/crons.png"><img alt="_images/crons.png" src="_images/crons.png" style="width: 900px;" /></a>
+</div></blockquote>
+<p>The following fields in a Cron decide when the cron runs and these can be
+modified as per your need.</p>
+<blockquote>
+<div><a class="reference internal image-reference" href="_images/cron.png"><img alt="_images/cron.png" src="_images/cron.png" style="width: 900px;" /></a>
+</div></blockquote>
+<ul class="simple">
+<li><strong>Interval Number and Interval Unit:</strong> These fields together make up the
+interval duration of this cron. By default, it is set to <cite>1 Day</cite>.
+This means that the cron runs once in a day. You could increase or
+decrease the frequency by changing <cite>Interval Number</cite>, <cite>Interval Unit</cite>.</li>
+<li><strong>Next Call:</strong> Indicates the date and time in which the cron will run
+the next time. You could change this time if you want to prepone or delay
+the execution of cron.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Dealing with Tryton Crons</a><ul>
+<li><a class="reference internal" href="#accessing-crons">Accessing Crons</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configuration.html"
+                        title="previous chapter">Configuring Prestashop settings</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="how-it-works.html"
+                        title="next chapter">How it works</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/dealing-with-crons.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="how-it-works.html" title="How it works"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="configuration.html" title="Configuring Prestashop settings"
+             >previous</a> |</li>
+        <li><a href="index.html">Tryton Prestashop Integration 2.8.0.1dev documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Openlabs Technologies &amp; Consulting (P) Ltd..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
