@@ -5,6 +5,7 @@
     :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
+from decimal import Decimal
 import unittest
 
 import trytond.tests.test_tryton
@@ -26,36 +27,48 @@ class TestSale(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                    prestashop_site=self.site.id, ps_test=True
+                    self.User.get_preferences(context_only=True),
+                    prestashop_site=self.site.id, ps_test=True,
                 ):
+                self.setup_sites()
+
                 client = self.site.get_prestashop_client()
 
-                self.assertEqual(len(self.Sale.search([])), 0)
-                self.assertEqual(len(self.Party.search([])), 1)
-                self.assertEqual(len(self.Address.search([])), 1)
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 0)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 0)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
 
                 order_data = get_objectified_xml('orders', 1)
 
                 self.Sale.find_or_create_using_ps_data(order_data)
-                self.assertEqual(len(self.Sale.search([])), 1)
-                self.assertEqual(len(self.Party.search([])), 2)
-                self.assertEqual(len(self.Address.search([])), 2)
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 2)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
 
                 # Try importing the same sale again, it should NOT create a
                 # new one.
                 self.Sale.find_or_create_using_ps_data(order_data)
-                self.assertEqual(len(self.Sale.search([])), 1)
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
 
-                # Creating the order again should blow up with a usererror
-                # due to sql constraints
-                self.assertRaises(
-                    UserError,
-                    self.Sale.create_using_ps_data, order_data
-                )
-
-                sale, = self.Sale.search([])
+                sale, = self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])
 
                 # Test getting sale using prestashop data
                 self.assertEqual(
@@ -69,6 +82,79 @@ class TestSale(BaseTestCase):
                     sale.total_amount,
                     Decimal(str(order_data.total_paid_tax_excl))
                 )
+
+                # Creating the order again should blow up with a usererror
+                # due to sql constraints
+                self.assertRaises(
+                    UserError,
+                    self.Sale.create_using_ps_data, order_data
+                )
+
+                # Sale should not be created under site_alt
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site_alt.id)
+                ])), 0)
+
+    def test_0013_order_import_delivered(self):
+        """Import an order that has been delivered on PS
+        """
+        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+            # Call method to setup defaults
+            self.setup_defaults()
+
+            with Transaction().set_context(
+                    self.User.get_preferences(context_only=True),
+                    prestashop_site=self.site.id, ps_test=True,
+                ):
+                self.setup_sites()
+
+                order_data = get_objectified_xml('orders', 1)
+
+                sale = self.Sale.find_or_create_using_ps_data(order_data)
+
+                self.assertEqual(sale.state, 'done')
+
+    def test_0016_order_import_canceled(self):
+        """Import an order which was canceled on PS
+        """
+        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+            # Call method to setup defaults
+            self.setup_defaults()
+
+            with Transaction().set_context(
+                    self.User.get_preferences(context_only=True),
+                    prestashop_site=self.site.id, ps_test=True,
+                ):
+                self.setup_sites()
+
+                order_data = get_objectified_xml('orders', 2)
+
+                sale = self.Sale.find_or_create_using_ps_data(order_data)
+
+                self.assertEqual(sale.state, 'cancel')
+
+    def test_0020_order_import_from_site(self):
+        """Test Order import from site
+        """
+        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+            # Call method to setup defaults
+            self.setup_defaults()
+
+            with Transaction().set_context(
+                    self.User.get_preferences(context_only=True),
+                    prestashop_site=self.site.id, ps_test=True,
+                ):
+                self.setup_sites()
+
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 0)
+
+                self.site.import_orders_from_prestashop_site()
+
+                self.assertEqual(len(self.Sale.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
 
 
 def suite():

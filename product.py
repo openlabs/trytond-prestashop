@@ -7,7 +7,7 @@
 """
 from decimal import Decimal
 
-from trytond.model import ModelSQL, fields
+from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import PoolMeta, Pool
 from trytond.transaction import Transaction
 
@@ -16,7 +16,7 @@ __all__ = ['Product', 'Template', 'TemplatePrestashop', 'ProductPrestashop']
 __metaclass__ = PoolMeta
 
 
-class TemplatePrestashop(ModelSQL):
+class TemplatePrestashop(ModelSQL, ModelView):
     """Product Template - Prestashop site store
 
     A template can be available on more than one sites on prestashop as product
@@ -50,7 +50,8 @@ class TemplatePrestashop(ModelSQL):
         "Setup"
         super(TemplatePrestashop, cls).__setup__()
         cls._sql_constraints += [
-            ('prestashop_id_site_uniq',
+            (
+                'prestashop_id_site_uniq',
                 'UNIQUE(prestashop_id, site)',
                 'Template must be unique by prestashop id and site'
             )
@@ -86,7 +87,12 @@ class Template:
         :param product_record: Objectified XML record sent by pystashop
         :returns: Active record of created template
         """
-        pass
+        template = cls.get_template_using_ps_data(product_record)
+
+        if not template:
+            template = cls.create_using_ps_data(product_record)
+
+        return template
 
     @classmethod
     def create_using_ps_data(cls, product_record):
@@ -99,7 +105,95 @@ class Template:
         :param product_record: Objectified XML record sent by pystashop
         :returns: Active record of created template
         """
-        pass
+        Product = Pool().get('product.product')
+        Uom = Pool().get('product.uom')
+        Site = Pool().get('prestashop.site')
+        SiteLang = Pool().get('prestashop.site.lang')
+
+        site = Site(Transaction().context.get('prestashop_site'))
+
+        # The name of a product can be in multiple languages
+        # If the name is in more than one language, create the record with
+        # name in first language (if a corresponding one exists on tryton) and
+        # updates the rest of the names in different languages by switching the
+        # language in context
+        # Same applies to description as well
+        name_in_langs = product_record.name.getchildren()
+        desc_in_langs = product_record.description.getchildren()
+
+        name_in_first_lang = name_in_langs.pop(0)
+        desc_in_first_lang = desc_in_langs[0]
+        site_lang = SiteLang.search_using_ps_id(
+            int(name_in_first_lang.get('id'))
+        )
+
+        # Product name and description can be in different first languages
+        # So create the variant with description only if the first language is
+        # same on both
+        if name_in_first_lang.get('id') == desc_in_first_lang.get('id'):
+            desc_in_first_lang = desc_in_langs.pop(0)
+            variant_data = {
+                'code': product_record.reference.pyval or None,
+                'description': desc_in_first_lang.pyval,
+                'prestashop_combination_ids': [('create', [{
+                    'prestashop_combination_id': 0,
+                }])]
+            }
+        else:
+            variant_data = {
+                'code': product_record.reference.pyval or None,
+                'prestashop_combination_ids': [('create', [{
+                    'prestashop_combination_id': 0,
+                }])]
+            }
+
+        # For a product in prestashop, create a template and a product in
+        # tryton.
+        unit, = Uom.search([('name', '=', 'Unit')], limit=1)
+        with Transaction().set_context(language=site_lang.language.code):
+            template, = cls.create([{
+                'name': name_in_first_lang.pyval,
+                'list_price': Decimal(str(product_record.price)),
+                'cost_price': Decimal(str(product_record.wholesale_price)),
+                'salable': True,
+                'default_uom': unit.id,
+                'sale_uom': unit.id,
+                'account_expense': site.default_account_expense.id,
+                'account_revenue': site.default_account_revenue.id,
+                'products': [('create', [variant_data])],
+                'prestashop_ids': [('create', [{
+                    'prestashop_id': product_record.id.pyval,
+                }])]
+            }])
+
+        # If there is only lang for name, control wont go to this loop
+        for name_in_lang in name_in_langs:
+            # Write the name in other languages
+            site_lang = SiteLang.search_using_ps_id(
+                int(name_in_lang.get('id'))
+            )
+            if not site_lang:
+                continue
+            with Transaction().set_context(language=site_lang.language.code):
+                cls.write([template], {
+                    'name': name_in_lang.pyval,
+                })
+
+        # If there is only lang for description which has already been used,
+        # control wont go to this loop
+        for desc_in_lang in desc_in_langs:
+            # Write the description in other languages
+            site_lang = SiteLang.search_using_ps_id(
+                int(desc_in_lang.get('id'))
+            )
+            if not site_lang:
+                continue
+            with Transaction().set_context(language=site_lang.language.code):
+                Product.write(template.products, {
+                    'description': desc_in_lang.pyval,
+                })
+
+        return template
 
     @classmethod
     def get_template_using_ps_data(cls, product_record):
@@ -112,7 +206,14 @@ class Template:
         :param product_record: Objectified XML record sent by pystashop
         :returns: Active record if a template is found else None
         """
-        pass
+        TemplatePrestashop = Pool().get('product.template.prestashop')
+
+        records = TemplatePrestashop.search([
+            ('prestashop_id', '=', product_record.id.pyval),
+            ('site', '=', Transaction().context.get('prestashop_site'))
+        ])
+
+        return records and records[0].template or None
 
     @classmethod
     def get_template_using_ps_id(cls, product_record_id):
@@ -125,10 +226,17 @@ class Template:
         :param product_record_id: Product ID on prestashop
         :returns: Active record if a template is found else None
         """
-        pass
+        TemplatePrestashop = Pool().get('product.template.prestashop')
+
+        records = TemplatePrestashop.search([
+            ('prestashop_id', '=', product_record_id),
+            ('site', '=', Transaction().context.get('prestashop_site'))
+        ])
+
+        return records and records[0].template or None
 
 
-class ProductPrestashop(ModelSQL):
+class ProductPrestashop(ModelSQL, ModelView):
     """Product Variant - Prestashop site store
 
     A product variant can be available on more than one sites on prestashop
@@ -164,11 +272,15 @@ class ProductPrestashop(ModelSQL):
         "Setup"
         super(ProductPrestashop, cls).__setup__()
         cls._error_messages.update({
-            'duplicate_combination': ('Combination with id '
+            'duplicate_combination': (
+                'Combination with id '
                 '"%(combination_id)s" exists for template "%(template)s" '
-                'in %(site)s'),
-            'duplicate_combination_across_site': ('Combination with id '
-                '"%(combination_id)s" exists in site "%(site)s"'),
+                'in %(site)s'
+            ),
+            'duplicate_combination_across_site': (
+                'Combination with id '
+                '"%(combination_id)s" exists in site "%(site)s"'
+            ),
         })
 
     @classmethod
@@ -178,7 +290,7 @@ class ProductPrestashop(ModelSQL):
 
         :param records: List of active records
         """
-        super(TypeTemplate, cls).validate(records)
+        super(ProductPrestashop, cls).validate(records)
         for record in records:
             record.check_combination()
 
@@ -191,11 +303,11 @@ class ProductPrestashop(ModelSQL):
         """
         # Check that this combination is unique within the template
         if len(ProductPrestashop.search([
-                ('prestashop_combination_id', '=',
-                    self.prestashop_combination_id),
-                ('site', '=', self.site),
-                ('product.template', '=', self.product.template)
-            ])) > 1:
+            ('prestashop_combination_id', '=',
+                self.prestashop_combination_id),
+            ('site', '=', self.site),
+            ('product.template', '=', self.product.template)
+        ])) > 1:
             self.raise_user_error(
                 'duplicate_combination', {
                     'combination_id': self.prestashop_combination_id,
@@ -205,12 +317,14 @@ class ProductPrestashop(ModelSQL):
             )
         # Check that this combination is unique throughout the site if
         # the combination id from prestashop is non zero
-        if self.prestashop_combination_id != 0 and \
-            len(ProductPrestashop.search([
+        if self.prestashop_combination_id != 0 and len(
+            ProductPrestashop.search([
                 ('prestashop_combination_id', '=',
                     self.prestashop_combination_id),
                 ('site', '=', self.site),
-            ])) > 1:
+            ]
+            )
+        ) > 1:
             self.raise_user_error(
                 'duplicate_combination_across_site', {
                     'combination_id': self.prestashop_combination_id,
@@ -228,11 +342,6 @@ class Product:
         'product.product.prestashop', 'product', 'Prestashop Combination IDs',
     )
 
-    @staticmethod
-    def default_prestashop_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
-
     @classmethod
     def find_or_create_using_ps_data(cls, combination_record):
         """Look for the variant in tryton corresponding to the
@@ -242,7 +351,11 @@ class Product:
         :param product_record: Objectified XML record sent by pystashop
         :returns: Active record of created variant
         """
-        pass
+        product = cls.get_product_using_ps_data(combination_record)
+        if not product:
+            product = cls.create_using_ps_data(combination_record)
+
+        return product
 
     @classmethod
     def create_using_ps_data(cls, combination_record):
@@ -255,7 +368,24 @@ class Product:
         :param product_record: Objectified XML record sent by pystashop
         :returns: Active record of created product
         """
-        pass
+        Template = Pool().get('product.template')
+        PrestashopSite = Pool().get('prestashop.site')
+
+        site = PrestashopSite(Transaction().context.get('prestashop_site'))
+        client = site.get_prestashop_client()
+
+        template = Template.find_or_create_using_ps_data(client.products.get(
+            combination_record.id_product.pyval
+        ))
+        product, = cls.create([{
+            'template': template.id,
+            'code': combination_record.reference.pyval or None,
+            'prestashop_combination_ids': [('create', [{
+                'prestashop_combination_id': combination_record.id.pyval,
+            }])]
+        }])
+
+        return product
 
     @classmethod
     def get_product_using_ps_data(cls, combination_record):
@@ -266,7 +396,14 @@ class Product:
         :param combination_record: Objectified XML record sent by pystashop
         :returns: Active record if a product is found else None
         """
-        pass
+        ProductPrestashop = Pool().get('product.product.prestashop')
+
+        records = ProductPrestashop.search([
+            ('prestashop_combination_id', '=', combination_record.id.pyval),
+            ('site', '=', Transaction().context.get('prestashop_site'))
+        ])
+
+        return records and records[0].product or None
 
     @classmethod
     def get_product_using_ps_id(cls, combination_record_id):
@@ -277,4 +414,11 @@ class Product:
         :param combination_record_id: Combination ID on prestashop
         :returns: Active record if a product is found else None
         """
-        pass
+        ProductPrestashop = Pool().get('product.product.prestashop')
+
+        records = ProductPrestashop.search([
+            ('prestashop_combination_id', '=', combination_record_id),
+            ('site', '=', Transaction().context.get('prestashop_site'))
+        ])
+
+        return records and records[0].product or None

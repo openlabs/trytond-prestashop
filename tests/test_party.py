@@ -19,7 +19,7 @@ class TestParty(BaseTestCase):
     """Test Customer > Party integration
     """
 
-    def test_0020_party_import(self):
+    def test_0010_party_import(self):
         """Test Party import
         """
         with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
@@ -29,31 +29,38 @@ class TestParty(BaseTestCase):
             with Transaction().set_context(
                     prestashop_site=self.site.id, ps_test=True
                 ):
+                self.setup_sites()
+
                 client = self.site.get_prestashop_client()
 
-                self.assertEqual(len(self.Party.search([])), 1)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
 
                 # Create a party using prestashop data
                 customer_data = get_objectified_xml('customers', 1)
                 party = self.Party.create_using_ps_data(customer_data)
-                self.assertEqual(len(self.Party.search([])), 2)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 1)
 
                 # Assert that the language set on party is same as the language
-                # in cache
+                # in site languages
                 self.assertEqual(
-                    party.lang.id,
+                    party.lang,
                     self.Lang.get_using_ps_id(customer_data.id_lang.pyval)
                 )
-                # Check that no new cache for lang has been created
 
                 # Try importing the same party, it should NOT create a
                 # new one.
                 party = self.Party.find_or_create_using_ps_data(
                     customer_data
                 )
-                self.assertEqual(len(self.Party.search([])), 2)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site.id)
+                ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 1)
 
                 # Create the same party, it should NOT create a new one
@@ -63,8 +70,6 @@ class TestParty(BaseTestCase):
                     UserError,
                     self.Party.create_using_ps_data, customer_data
                 )
-                self.assertEqual(len(self.Party.search([])), 2)
-                self.assertEqual(len(self.ContactMechanism.search([])), 1)
 
                 # Search for the same party in tryton using a different method
                 # It should return the same party
@@ -73,7 +78,24 @@ class TestParty(BaseTestCase):
                     self.Party.get_party_using_ps_data(customer_data).id
                 )
 
-    def test_0030_address_import_n_matching(self):
+            with Transaction().set_context(
+                    prestashop_site=self.site_alt.id, ps_test=True
+                ):
+                client = self.site_alt.get_prestashop_client()
+
+                # Nothing should be linked to site_alt
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site_alt.id)
+                ])), 0)
+
+                # Create a party using prestashop data
+                customer_data = get_objectified_xml('customers', 1)
+                party = self.Party.create_using_ps_data(customer_data)
+                self.assertEqual(len(self.Party.search([
+                    ('prestashop_site', '=', self.site_alt.id)
+                ])), 1)
+
+    def test_0020_address_import_n_matching(self):
         """Test address import and pattern matching
         """
         with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
@@ -83,11 +105,17 @@ class TestParty(BaseTestCase):
             with Transaction().set_context(
                     prestashop_site=self.site.id, ps_test=True
                 ):
+                self.setup_sites()
+
                 client = self.site.get_prestashop_client()
 
-                self.assertEqual(len(self.Address.search([])), 1)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
-                self.assertEqual(len(self.CountryPrestashop.search([])), 0)
+                self.assertEqual(len(self.CountryPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 0)
 
                 # Create a party
                 party = self.Party.find_or_create_using_ps_data(
@@ -99,15 +127,20 @@ class TestParty(BaseTestCase):
                 # This address has a country but not a state
                 # So, it should proceed without breaking and creating a
                 # cache record for country
+                address_data = get_objectified_xml('addresses', 2)
                 address = self.Address.create_for_party_using_ps_data(
-                    party, get_objectified_xml('addresses', 2)
+                    party, address_data
                 )
-                self.assertEqual(len(self.Address.search([])), 3)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 2)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
-                self.assertEqual(len(self.CountryPrestashop.search([])), 1)
+                self.assertEqual(len(self.CountryPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 1)
 
                 # Make sure the country cached is the right one
-                ps_country_id = customer_data.id_country.pyval
+                ps_country_id = address_data.id_country.pyval
                 self.assertEqual(
                     self.Country.get_using_ps_id(ps_country_id).id,
                     address.country.id
@@ -119,61 +152,77 @@ class TestParty(BaseTestCase):
                     self.Address.find_or_create_for_party_using_ps_data(
                         party, get_objectified_xml('addresses', 2)
                     )
-                self.assertEqual(len(self.Address.search([])), 3)
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site.id)
+                ])), 2)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
-                self.assertEqual(len(self.CountryPrestashop.search([])), 1)
+                self.assertEqual(len(self.CountryPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 1)
 
                 # Test with an exactly same address with same ID
                 self.assertTrue(
-                    self.address.match_with_ps_data(
+                    address.match_with_ps_data(
                         get_objectified_xml('addresses', 2001))
                 )
 
                 # Test with a nearly same address with same ID and street2
                 # missing
                 self.assertFalse(
-                    self.address.match_with_ps_data(
+                    address.match_with_ps_data(
                         get_objectified_xml('addresses', 2002))
                 )
 
                 # Test with a nearly same address with same ID and different
                 # country
                 self.assertFalse(
-                    self.address.match_with_ps_data(
+                    address.match_with_ps_data(
                         get_objectified_xml('addresses', 2003))
                 )
 
                 # Test with a nearly same address with same ID and non ascii
                 # characters in name
                 self.assertFalse(
-                    self.address.match_with_ps_data(
+                    address.match_with_ps_data(
                         get_objectified_xml('addresses', 2004))
                 )
 
                 # Test with a nearly same address with same ID and postcode
                 # missing
                 self.assertFalse(
-                    self.address.match_with_ps_data(
+                    address.match_with_ps_data(
                         get_objectified_xml('addresses', 2005))
                 )
 
                 # Test with a nearly same address with same ID and different
                 # city
                 self.assertFalse(
-                    self.address.match_with_ps_data(
+                    address.match_with_ps_data(
                         get_objectified_xml('addresses', 2006))
                 )
 
                 # No subdivision has been cached till now
-                self.assertEqual(len(self.SubdivisionPrestashop.search([])), 0)
+                self.assertEqual(len(self.SubdivisionPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 0)
 
                 state_data = get_objectified_xml('states', 1)
                 #Cache a subdivision
                 subdivision = self.Subdivision.cache_prestashop_id(1)
-                self.assertEqual(len(self.SubdivisionPrestashop.search([])), 1)
+                self.assertEqual(len(self.SubdivisionPrestashop.search([
+                    ('site', '=', self.site.id)
+                ])), 1)
                 self.assertEqual(
-                    self.Subdivision.get_using_ps_id(1).id, subdivison.id
+                    self.Subdivision.get_using_ps_id(1).id, subdivision.id
                 )
+
+                # Nothing should be created under site_alt
+                self.assertEqual(len(self.Address.search([
+                    ('party.prestashop_site', '=', self.site_alt.id)
+                ])), 0)
+                self.assertEqual(len(self.CountryPrestashop.search([
+                    ('site', '=', self.site_alt.id)
+                ])), 0)
 
 
 def suite():

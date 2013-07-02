@@ -47,16 +47,41 @@ class Party:
         :param customer_record: Objectified XML record sent by pystashop
         :returns: Active record of created party
         """
-        pass
+        party = cls.get_party_using_ps_data(customer_record)
+
+        if not party:
+            party = cls.create_using_ps_data(customer_record)
+
+        return party
 
     @classmethod
     def create_using_ps_data(cls, customer_record):
         """Create a party from the customer record sent by prestashop client.
+        Also create the email sent with the party as a contact mechanism.
 
         :param customer_record: Objectified XML record sent by pystashop
         :returns: Active record of created party
         """
-        pass
+        ContactMechanism = Pool().get('party.contact_mechanism')
+        Language = Pool().get('ir.lang')
+
+        # Create the party with the email
+        party, = cls.create([{
+            'name': ' '.join([
+                customer_record.firstname.pyval,
+                customer_record.lastname.pyval
+            ]),
+            'prestashop_id': customer_record.id.pyval,
+            'lang': Language.get_using_ps_id(
+                customer_record.id_lang.pyval
+            ).id if hasattr(customer_record, 'id_lang') else None,
+            'contact_mechanisms': [('create', [{
+                'type': 'email',
+                'value': customer_record.email.pyval,
+            }])],
+        }])
+
+        return party
 
     @classmethod
     def get_party_using_ps_data(cls, customer_record):
@@ -67,7 +92,14 @@ class Party:
         :param customer_record: Objectified XML record sent by prestashop
         :returns: Active record if a party is found else None
         """
-        pass
+        party = cls.search([
+            ('prestashop_id', '=', customer_record.id.pyval),
+            ('prestashop_site', '=', Transaction().context.get(
+                'prestashop_site'
+            ))
+        ])
+
+        return party and party[0] or None
 
 
 class Address:
@@ -98,7 +130,15 @@ class Address:
         :param party: Active Record of Party
         :returns: Active record of created address
         """
-        pass
+        for address in party.addresses:
+            if address.match_with_ps_data(address_record):
+                break
+        else:
+            address = cls.create_for_party_using_ps_data(
+                party, address_record
+            )
+
+        return address
 
     @classmethod
     def create_for_party_using_ps_data(cls, party, address_record):
@@ -109,7 +149,52 @@ class Address:
         :param party: Active Record of Party
         :returns: Active record of created address
         """
-        pass
+        Country = Pool().get('country.country')
+        Subdivision = Pool().get('country.subdivision')
+        ContactMechanism = Pool().get('party.contact_mechanism')
+
+        country = None
+        subdivision = None
+        if address_record.id_country:
+            country = Country.get_using_ps_id(
+                address_record.id_country.pyval
+            )
+        if address_record.id_state:
+            subdivision = Subdivision.get_using_ps_id(
+                address_record.id_state.pyval
+            )
+        address, = cls.create([{
+            'prestashop_id': address_record.id.pyval,
+            'party': party.id,
+            'name': ' '.join([
+                address_record.firstname.pyval,
+                address_record.lastname.pyval
+            ]),
+            'street': address_record.address1.pyval,
+            'streetbis': address_record.address2.pyval or None,
+            'zip': unicode(address_record.postcode.pyval),
+            'city': address_record.city.pyval,
+            'country': country.id if country else None,
+            'subdivision': subdivision.id if subdivision else None,
+        }])
+
+        # Create phone and/or mobile as a contact mechanism(s)
+        contact_data = []
+        if address_record.phone:
+            contact_data.append({
+                'party': party.id,
+                'type': 'phone',
+                'value': unicode(address_record.phone.pyval),
+            })
+        if address_record.phone_mobile:
+            contact_data.append({
+                'party': party.id,
+                'type': 'mobile',
+                'value': unicode(address_record.phone_mobile.pyval),
+            })
+        ContactMechanism.find_or_create_using_dict(contact_data)
+
+        return address
 
     def match_with_ps_data(self, address_record):
         """Match the current address with the address_record.
@@ -119,7 +204,54 @@ class Address:
         :param address_record: Objectified XML record sent by pystashop
         :returns: True if address found else False
         """
-        pass
+        Country = Pool().get('country.country')
+        Subdivision = Pool().get('country.subdivision')
+
+        fields_map = {
+            'prestashop_id': 'id',
+            'street': 'address1',
+            'streetbis': 'address2',
+            'zip': 'postcode',
+            'city': 'city',
+        }
+        for key, value in fields_map.items():
+            # A string match is needed on both sides because these fields might
+            # contains numbers which will be evaluated as number against
+            # string
+            if unicode(getattr(self, key)) != \
+                    (unicode(getattr(address_record, value).pyval) or None):
+                return False
+
+        if self.name != u' '.join([
+                address_record.firstname.pyval,
+                address_record.lastname.pyval
+            ]):
+            return False
+
+        if address_record.id_country:
+            # If no country is found on tryton address return False
+            if not self.country:
+                return False
+
+            if self.country and \
+                    self.country != Country.get_using_ps_id(
+                        address_record.id_country.pyval
+                    ):
+                return False
+
+        if address_record.id_state:
+            # If no subdivision is found on tryton address return False
+            if not self.subdivision:
+                return False
+
+            if self.subdivision != Subdivision.get_using_ps_id(
+                        address_record.id_state.pyval
+                    ):
+                return False
+
+        # If this method reaches here, it means that every field has matched,
+        # hence return True
+        return True
 
 
 class ContactMechanism:
@@ -138,4 +270,17 @@ class ContactMechanism:
             }]
         :returns: Active records of created/found records
         """
-        pass
+        new_records = []
+
+        for mechanism_data in data:
+            # Check if a record exists with the set of values provided
+            if not cls.search([
+                    ('party', '=', mechanism_data['party']),
+                    ('type', '=', mechanism_data['type']),
+                    ('value', '=', mechanism_data['value'])
+                ]):
+                new_records.append(mechanism_data)
+
+        if new_records:
+            return cls.create(new_records)
+        return []

@@ -68,40 +68,48 @@ imported in tryton as described below:
 
 **Orders in Prestashop**
 
-image: TODO
+.. image:: images/orders-in-ps.png
+    :width: 900
 
 **Orders imported as Sales in Tryton**
 
 | ``Menu: Sales > Sales``
 
-image: TODO
+.. image:: images/orders-in-tryton.png
+    :width: 900
 
 **Order View in Prestashop**
 
-image: TODO
+.. image:: images/order-in-ps.png
+    :width: 900
 
 **Sale in Tryton**
 
-image: TODO
+.. image:: images/order-in-tryton.png
+    :width: 900
 
 This import will also create/update parties and products corresponding to
 customer and products in the order on prestashop.
 
 **Customer in Prestashop**
 
-image: TODO
+.. image:: images/customer-in-ps.png
+    :width: 900
 
 **Party in Tryton**
 
-image: TODO
+.. image:: images/party-in-tryton.png
+    :width: 900
 
 **Product in Prestashop**
 
-image: TODO
+.. image:: images/product-in-ps.png
+    :width: 900
 
 **Product in Tryton**
 
-image: TODO
+.. image:: images/product-in-tryton.png
+    :width: 900
 
 
 .. _export-orders:
@@ -124,18 +132,13 @@ to your requirements.
   `paid` in tryton. These will be also be marked as `Delivered` if they
   are marked `shipped` in Tryton.
 
-**New Order in Prestashop**
-
-image: TODO
-
-**Order imported in Tryton**
-
-image: TODO
 
 **Order processed in Tryton**
 
-image: TODO
+.. image:: images/order-processed-in-tryton.png
+    :width: 900
 
 **Order Status exported to Prestashop**
 
-image: TODO
+.. image:: images/order-status-in-ps.png
+    :width: 900
