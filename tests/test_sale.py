@@ -56,7 +56,7 @@ class TestSale(BaseTestCase):
                 ])), 1)
                 self.assertEqual(len(self.Address.search([
                     ('party.prestashop_site', '=', self.site.id)
-                ])), 2)
+                ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
 
                 # Try importing the same sale again, it should NOT create a

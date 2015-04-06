@@ -129,12 +129,12 @@ class TestParty(BaseTestCase):
                 # So, it should proceed without breaking and creating a
                 # cache record for country
                 address_data = get_objectified_xml('addresses', 2)
-                address = self.Address.create_for_party_using_ps_data(
+                address = self.Address.find_or_create_for_party_using_ps_data(
                     party, address_data
                 )
                 self.assertEqual(len(self.Address.search([
                     ('party.prestashop_site', '=', self.site.id)
-                ])), 2)
+                ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
                 self.assertEqual(len(self.CountryPrestashop.search([
                     ('site', '=', self.site.id)
@@ -155,7 +155,7 @@ class TestParty(BaseTestCase):
                     )
                 self.assertEqual(len(self.Address.search([
                     ('party.prestashop_site', '=', self.site.id)
-                ])), 2)
+                ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
                 self.assertEqual(len(self.CountryPrestashop.search([
                     ('site', '=', self.site.id)
