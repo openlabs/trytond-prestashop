@@ -1,14 +1,24 @@
-#This file is part of Tryton.  The COPYRIGHT file at the top level of
-#this repository contains the full copyright notices and license terms.
+# -*- coding: utf-8 -*-
+"""
+    __init__
+
+    :copyright: (c) 2015 by Openlabs Technologies & Consulting (P) Limited
+    :license: GPLv3, see LICENSE for more details.
+"""
 
 from trytond.pool import Pool
-from .prestashop import *
-from .country import *
-from .currency import *
-from .party import *
-from .product import *
-from .sale import *
-from .lang import *
+from prestashop import (
+    Site, ImportWizardView, ExportWizardView,
+    ConnectionWizardView, ExportWizard, ConnectionWizard
+)
+from country import (
+    Country, Subdivision, CountryPrestashop, SubdivisionPrestashop
+)
+from currency import CurrencyPrestashop, Currency
+from party import Party, Address, ContactMechanism
+from product import Template, TemplatePrestashop, Product, ProductPrestashop
+from sale import Sale, SaleLine, SiteOrderState
+from lang import Language, SiteLanguage
 
 
 def register():
