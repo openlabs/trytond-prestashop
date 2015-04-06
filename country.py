@@ -2,7 +2,7 @@
 """
     country
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from trytond.model import ModelSQL, fields
@@ -41,8 +41,8 @@ class CountryPrestashop(ModelSQL):
     def __setup__(cls):
         super(CountryPrestashop, cls).__setup__()
         cls._sql_constraints += [
-            ('prestashop_id_site_uniq',
-                'UNIQUE(prestashop_id, site)',
+            (
+                'prestashop_id_site_uniq', 'UNIQUE(prestashop_id, site)',
                 'Country must be unique by prestashop id and site'
             )
         ]
@@ -75,8 +75,8 @@ class SubdivisionPrestashop(ModelSQL):
     def __setup__(cls):
         super(SubdivisionPrestashop, cls).__setup__()
         cls._sql_constraints += [
-            ('prestashop_id_site_uniq',
-                'UNIQUE(prestashop_id, site)',
+            (
+                'prestashop_id_site_uniq', 'UNIQUE(prestashop_id, site)',
                 'Subdivision must be unique by prestashop id and site'
             )
         ]

@@ -2,7 +2,7 @@
 """
     test_product
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 import unittest
@@ -16,22 +16,23 @@ from test_prestashop import get_objectified_xml, BaseTestCase
 
 
 class TestParty(BaseTestCase):
-    """Test Customer > Party integration
+    """
+    Test Customer > Party integration
     """
 
     def test_0010_party_import(self):
         """Test Party import
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    prestashop_site=self.site.id, ps_test=True
-                ):
+                prestashop_site=self.site.id, ps_test=True
+            ):
                 self.setup_sites()
 
-                client = self.site.get_prestashop_client()
+                self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.Party.search([
                     ('prestashop_site', '=', self.site.id)
@@ -79,9 +80,9 @@ class TestParty(BaseTestCase):
                 )
 
             with Transaction().set_context(
-                    prestashop_site=self.site_alt.id, ps_test=True
-                ):
-                client = self.site_alt.get_prestashop_client()
+                prestashop_site=self.site_alt.id, ps_test=True
+            ):
+                self.site_alt.get_prestashop_client()
 
                 # Nothing should be linked to site_alt
                 self.assertEqual(len(self.Party.search([
@@ -98,16 +99,16 @@ class TestParty(BaseTestCase):
     def test_0020_address_import_n_matching(self):
         """Test address import and pattern matching
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    prestashop_site=self.site.id, ps_test=True
-                ):
+                prestashop_site=self.site.id, ps_test=True
+            ):
                 self.setup_sites()
 
-                client = self.site.get_prestashop_client()
+                self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.Address.search([
                     ('party.prestashop_site', '=', self.site.id)
@@ -206,8 +207,9 @@ class TestParty(BaseTestCase):
                     ('site', '=', self.site.id)
                 ])), 0)
 
-                state_data = get_objectified_xml('states', 1)
-                #Cache a subdivision
+                get_objectified_xml('states', 1)
+
+                # Cache a subdivision
                 subdivision = self.Subdivision.cache_prestashop_id(1)
                 self.assertEqual(len(self.SubdivisionPrestashop.search([
                     ('site', '=', self.site.id)

@@ -9,7 +9,7 @@
 from trytond.pool import Pool
 from prestashop import (
     Site, ImportWizardView, ExportWizardView,
-    ConnectionWizardView, ExportWizard, ConnectionWizard
+    ConnectionWizardView, ExportWizard, ImportWizard, ConnectionWizard
 )
 from country import (
     Country, Subdivision, CountryPrestashop, SubdivisionPrestashop

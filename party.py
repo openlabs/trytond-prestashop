@@ -2,7 +2,7 @@
 """
     party
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from trytond.model import fields
@@ -28,7 +28,8 @@ class Party:
         "Setup"
         super(Party, cls).__setup__()
         cls._sql_constraints += [
-            ('prestashop_id_site_uniq',
+            (
+                'prestashop_id_site_uniq',
                 'UNIQUE(prestashop_id, prestashop_site)',
                 'Party must be unique by prestashop id and site'
             )
@@ -62,7 +63,6 @@ class Party:
         :param customer_record: Objectified XML record sent by pystashop
         :returns: Active record of created party
         """
-        ContactMechanism = Pool().get('party.contact_mechanism')
         Language = Pool().get('ir.lang')
 
         # Create the party with the email
@@ -118,7 +118,7 @@ class Address:
         :param name: Name of the field
         """
         return self.party.prestashop_site and self.party.prestashop_site.id \
-                or None
+            or None
 
     @classmethod
     def find_or_create_for_party_using_ps_data(
@@ -223,9 +223,9 @@ class Address:
                 return False
 
         if self.name != u' '.join([
-                address_record.firstname.pyval,
-                address_record.lastname.pyval
-            ]):
+            address_record.firstname.pyval,
+            address_record.lastname.pyval
+        ]):
             return False
 
         if address_record.id_country:
@@ -245,8 +245,8 @@ class Address:
                 return False
 
             if self.subdivision != Subdivision.get_using_ps_id(
-                        address_record.id_state.pyval
-                    ):
+                address_record.id_state.pyval
+            ):
                 return False
 
         # If this method reaches here, it means that every field has matched,
@@ -275,10 +275,10 @@ class ContactMechanism:
         for mechanism_data in data:
             # Check if a record exists with the set of values provided
             if not cls.search([
-                    ('party', '=', mechanism_data['party']),
-                    ('type', '=', mechanism_data['type']),
-                    ('value', '=', mechanism_data['value'])
-                ]):
+                ('party', '=', mechanism_data['party']),
+                ('type', '=', mechanism_data['type']),
+                ('value', '=', mechanism_data['value'])
+            ]):
                 new_records.append(mechanism_data)
 
         if new_records:

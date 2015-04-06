@@ -2,7 +2,7 @@
 """
     test_sale
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from decimal import Decimal
@@ -22,17 +22,17 @@ class TestSale(BaseTestCase):
     def test_0010_order_import(self):
         """Test Order import
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    self.User.get_preferences(context_only=True),
-                    prestashop_site=self.site.id, ps_test=True,
-                ):
+                self.User.get_preferences(context_only=True),
+                prestashop_site=self.site.id, ps_test=True,
+            ):
                 self.setup_sites()
 
-                client = self.site.get_prestashop_client()
+                self.site.get_prestashop_client()
 
                 self.assertEqual(len(self.Sale.search([
                     ('prestashop_site', '=', self.site.id)
@@ -98,14 +98,14 @@ class TestSale(BaseTestCase):
     def test_0013_order_import_delivered(self):
         """Import an order that has been delivered on PS
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    self.User.get_preferences(context_only=True),
-                    prestashop_site=self.site.id, ps_test=True,
-                ):
+                self.User.get_preferences(context_only=True),
+                prestashop_site=self.site.id, ps_test=True,
+            ):
                 self.setup_sites()
 
                 order_data = get_objectified_xml('orders', 1)
@@ -117,14 +117,14 @@ class TestSale(BaseTestCase):
     def test_0016_order_import_canceled(self):
         """Import an order which was canceled on PS
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    self.User.get_preferences(context_only=True),
-                    prestashop_site=self.site.id, ps_test=True,
-                ):
+                self.User.get_preferences(context_only=True),
+                prestashop_site=self.site.id, ps_test=True,
+            ):
                 self.setup_sites()
 
                 order_data = get_objectified_xml('orders', 2)
@@ -136,14 +136,14 @@ class TestSale(BaseTestCase):
     def test_0020_order_import_from_site(self):
         """Test Order import from site
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
             self.setup_defaults()
 
             with Transaction().set_context(
-                    self.User.get_preferences(context_only=True),
-                    prestashop_site=self.site.id, ps_test=True,
-                ):
+                self.User.get_preferences(context_only=True),
+                prestashop_site=self.site.id, ps_test=True,
+            ):
                 self.setup_sites()
 
                 self.assertEqual(len(self.Sale.search([

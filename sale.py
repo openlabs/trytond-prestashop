@@ -2,7 +2,7 @@
 """
     sale
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from datetime import datetime
@@ -47,17 +47,15 @@ class SiteOrderState(ModelSQL, ModelView):
 
     import_orders = fields.Boolean('Import Orders in this state')   # TODO
     invoice_method = fields.Selection([
-            ('manual', 'Manual'),
-            ('order', 'On Order Processed'),
-            ('shipment', 'On Shipment Sent'),
-        ], 'Invoice Method',
-    )
+        ('manual', 'Manual'),
+        ('order', 'On Order Processed'),
+        ('shipment', 'On Shipment Sent'),
+    ], 'Invoice Method')
     shipment_method = fields.Selection([
-            ('manual', 'Manual'),
-            ('order', 'On Order Processed'),
-            ('invoice', 'On Invoice Paid'),
-        ], 'Shipment Method',
-    )
+        ('manual', 'Manual'),
+        ('order', 'On Order Processed'),
+        ('invoice', 'On Invoice Paid'),
+    ], 'Shipment Method')
 
     @staticmethod
     def default_import_orders():
@@ -241,7 +239,6 @@ class Sale:
         """
         Party = Pool().get('party.party')
         Address = Pool().get('party.address')
-        ContactMechanism = Pool().get('party.contact_mechanism')
         Line = Pool().get('sale.line')
         PrestashopSite = Pool().get('prestashop.site')
         Currency = Pool().get('currency.currency')
@@ -280,7 +277,8 @@ class Sale:
             'party': party.id,
             'invoice_address': inv_address.id,
             'shipment_address': ship_address.id,
-            'warehouse': site.default_warehouse and site.default_warehouse.id \
+            'warehouse':
+                site.default_warehouse and site.default_warehouse.id
                 or None,
             'prestashop_id': order_record.id.pyval,
             'currency': Currency.get_using_ps_id(
@@ -303,14 +301,12 @@ class Sale:
 
         if Decimal(str(order_record.total_shipping)):
             lines_data.append(
-                Line.get_shipping_line_data_using_ps_data(
-                order_record
-            ))
+                Line.get_shipping_line_data_using_ps_data(order_record)
+            )
         if Decimal(str(order_record.total_discounts)):
             lines_data.append(
-                Line.get_discount_line_data_using_ps_data(
-                order_record
-            ))
+                Line.get_discount_line_data_using_ps_data(order_record)
+            )
 
         sale_data['lines'] = [('create', lines_data)]
 
@@ -329,9 +325,8 @@ class Sale:
         :param order_state: Site order state corresponding to ps order state
         """
         Sale = Pool().get('sale.sale')
-        Invoice = Pool().get('account.invoice')
 
-        client = self.prestashop_site.get_prestashop_client()
+        self.prestashop_site.get_prestashop_client()
 
         # Cancel the order if its cancelled on prestashop
         if order_state.order_state == 'sale.cancel':
@@ -355,8 +350,9 @@ class Sale:
         """
         sales = cls.search([
             ('prestashop_id', '=', order_record.id.pyval),
-            ('prestashop_site', '=', Transaction().context.get(
-                'prestashop_site')
+            (
+                'prestashop_site', '=',
+                Transaction().context.get('prestashop_site')
             )
         ])
 
@@ -370,6 +366,7 @@ class Sale:
         SiteOrderState = Pool().get('prestashop.site.order_state')
 
         client = self.prestashop_site.get_prestashop_client()
+
         def get_state(state_id):
             "Returns the id of prestashop state corresponding to tryton state"
             return client.order_states.get_list(

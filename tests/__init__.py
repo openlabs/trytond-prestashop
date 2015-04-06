@@ -2,7 +2,7 @@
 """
     __init__
 
-    :copyright: © 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: © 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 import unittest
@@ -12,6 +12,7 @@ from test_prestashop import TestPrestashop
 from test_party import TestParty
 from test_product import TestProduct
 from test_sale import TestSale
+
 
 def suite():
     "Prestashop integration test suite"
