@@ -113,10 +113,9 @@ class SiteLanguage(ModelSQL, ModelView):
         if lang_record.language_code.pyval == 'en':
             tryton_lang = Language.search([('code', '=', 'en_US')])
         else:
+            lang_code, country_code = lang_record.language_code.pyval.split('-')
             tryton_lang = Language.search([
-                ('code', '=', lang_record.language_code.pyval.replace(
-                    '-', '_'
-                ))
+                ('code', '=', '_'.join([lang_code, country_code.upper()]))
             ])
         site_lang, = SiteLanguage.create([{
             'name': lang_record.name.pyval,
