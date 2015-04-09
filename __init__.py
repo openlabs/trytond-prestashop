@@ -8,7 +8,7 @@
 
 from trytond.pool import Pool
 from prestashop import (
-    Site, ImportWizardView, ExportWizardView,
+    Site, ImportWizardView, ExportWizardView, Channel,
     ConnectionWizardView, ExportWizard, ImportWizard, ConnectionWizard
 )
 from country import (
@@ -24,6 +24,7 @@ from lang import Language, SiteLanguage
 def register():
     "Register classes with pool"
     Pool.register(
+        Channel,
         Site,
         ImportWizardView,
         ExportWizardView,

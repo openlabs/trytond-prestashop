@@ -292,6 +292,7 @@ class Sale:
 
         sale_data['invoice_method'] = ps_order_state.invoice_method
         sale_data['shipment_method'] = ps_order_state.shipment_method
+        sale_data['channel'] = site.channel.id
 
         lines_data = []
         for order_line in order_record.associations.order_rows.iterchildren():

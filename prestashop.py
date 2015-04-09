@@ -14,16 +14,32 @@ from mockstashop import MockstaShopWebservice
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
-from trytond.pool import Pool
+from trytond.pool import Pool, PoolMeta
 from trytond.wizard import Wizard, StateView, Button
 
-
+__metaclass__ = PoolMeta
 __all__ = [
-    'Site', 'ImportWizardView', 'ImportWizard',
+    'Channel', 'Site', 'ImportWizardView', 'ImportWizard',
     'ExportWizardView', 'ExportWizard',
     'ConnectionWizardView', 'ConnectionWizard',
 ]
 TIMEZONES = [(x, x) for x in pytz.common_timezones]
+
+
+class Channel:
+    """
+    Sale Channel model
+    """
+    __name__ = 'sale.channel'
+
+    @classmethod
+    def get_source(cls):
+        """
+        Get the source
+        """
+        res = super(Channel, cls).get_source()
+        res.append(('prestashop', 'Prestashop'))
+        return res
 
 
 class Site(ModelSQL, ModelView):
@@ -45,6 +61,10 @@ class Site(ModelSQL, ModelView):
 
     #: Last time at which the orders were exported to prestashop
     last_order_export_time = fields.DateTime('Last order export time')
+    channel = fields.Many2One(
+        'sale.channel', 'Channel', domain=[('source', '=', 'prestashop')],
+        required=True
+    )
 
     #: Used to set expense account while creating products.
     default_account_expense = fields.Property(fields.Many2One(
@@ -269,7 +289,9 @@ class Site(ModelSQL, ModelView):
         time_now = site_tz.normalize(pytz.utc.localize(utc_time_now))
         client = self.get_prestashop_client()
 
-        with Transaction().set_context(prestashop_site=self.id):
+        with Transaction().set_context(
+            prestashop_site=self.id, current_channel=self.channel.id
+        ):
             if self.last_order_import_time:
                 # In tryton all time stored is in UTC
                 # Convert the last import time to timezone of the site
