@@ -28,14 +28,15 @@ class TestProduct(BaseTestCase):
 
             with Transaction().set_context(
                 prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.site.channel.id
             ):
                 self.setup_sites()
 
-                self.assertEqual(len(self.ProductTemplate.search([])), 0)
+                self.assertEqual(len(self.ProductTemplate.search([])), 1)
                 self.assertEqual(len(self.TemplatePrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 0)
-                self.assertEqual(len(self.Product.search([])), 0)
+                self.assertEqual(len(self.Product.search([])), 1)
                 self.assertEqual(len(self.ProductPrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 0)
@@ -46,11 +47,11 @@ class TestProduct(BaseTestCase):
                 )
                 # This should create a template and two variants where one
                 # is created by template and other by this combination
-                self.assertEqual(len(self.ProductTemplate.search([])), 1)
+                self.assertEqual(len(self.ProductTemplate.search([])), 2)
                 self.assertEqual(len(self.TemplatePrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 1)
-                self.assertEqual(len(self.Product.search([])), 1)
+                self.assertEqual(len(self.Product.search([])), 2)
                 self.assertEqual(len(self.ProductPrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 1)
@@ -114,14 +115,15 @@ class TestProduct(BaseTestCase):
 
             with Transaction().set_context(
                 prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.site.channel.id
             ):
                 self.setup_sites()
 
-                self.assertEqual(len(self.ProductTemplate.search([])), 0)
+                self.assertEqual(len(self.ProductTemplate.search([])), 1)
                 self.assertEqual(len(self.TemplatePrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 0)
-                self.assertEqual(len(self.Product.search([])), 0)
+                self.assertEqual(len(self.Product.search([])), 1)
                 self.assertEqual(len(self.ProductPrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 0)
@@ -131,11 +133,11 @@ class TestProduct(BaseTestCase):
                 )
                 # This should create a template and two variants where one
                 # is created by template and other by this combination
-                self.assertEqual(len(self.ProductTemplate.search([])), 1)
+                self.assertEqual(len(self.ProductTemplate.search([])), 2)
                 self.assertEqual(len(self.TemplatePrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 1)
-                self.assertEqual(len(self.Product.search([])), 2)
+                self.assertEqual(len(self.Product.search([])), 3)
                 self.assertEqual(len(self.ProductPrestashop.search([
                     ('site', '=', self.site.id)
                 ])), 2)
@@ -145,7 +147,7 @@ class TestProduct(BaseTestCase):
                 self.Product.find_or_create_using_ps_data(
                     get_objectified_xml('combinations', 1)
                 )
-                self.assertEqual(len(self.Product.search([])), 2)
+                self.assertEqual(len(self.Product.search([])), 3)
 
                 # Test getting product using prestashop data
                 self.assertEqual(

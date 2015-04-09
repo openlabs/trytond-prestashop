@@ -29,6 +29,7 @@ class TestSale(BaseTestCase):
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
                 prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.site.channel.id
             ):
                 self.setup_sites()
 
@@ -105,6 +106,7 @@ class TestSale(BaseTestCase):
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
                 prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.site.channel.id
             ):
                 self.setup_sites()
 
@@ -124,6 +126,7 @@ class TestSale(BaseTestCase):
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
                 prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.site.channel.id
             ):
                 self.setup_sites()
 
@@ -143,6 +146,7 @@ class TestSale(BaseTestCase):
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
                 prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.site.channel.id
             ):
                 self.setup_sites()
 
