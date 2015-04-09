@@ -65,6 +65,12 @@ class Site(ModelSQL, ModelView):
         'sale.channel', 'Channel', domain=[('source', '=', 'prestashop')],
         required=True
     )
+    shipping_product = fields.Many2One(
+        'product.product', 'Shipping Product', required=True, domain=[
+            ('type', '=', 'service'),
+            ('template.type', '=', 'service'),
+        ]
+    )
 
     #: Used to set expense account while creating products.
     default_account_expense = fields.Property(fields.Many2One(

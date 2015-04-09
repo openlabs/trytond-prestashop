@@ -467,9 +467,11 @@ class SaleLine:
         site = PrestashopSite(Transaction().context.get('prestashop_site'))
         return {
             'quantity': 1,
+            'product': site.shipping_product.id,
             'unit_price': Decimal(str(
                 order_record.total_shipping_tax_excl
             )).quantize(Decimal(10) ** - site.company.currency.digits),
+            'unit': site.shipping_product.default_uom.id,
             'description': 'Shipping Cost [Excl tax]',
         }
 
