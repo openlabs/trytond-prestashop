@@ -283,7 +283,7 @@ class Sale:
             'prestashop_id': order_record.id.pyval,
             'currency': Currency.get_using_ps_id(
                 order_record.id_currency.pyval
-            ),
+            ).id,
         }
 
         ps_order_state = SiteOrderState.search_using_ps_id(
