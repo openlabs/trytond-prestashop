@@ -283,7 +283,7 @@ class Sale:
             'prestashop_id': order_record.id.pyval,
             'currency': Currency.get_using_ps_id(
                 order_record.id_currency.pyval
-            ),
+            ).id,
         }
 
         ps_order_state = SiteOrderState.search_using_ps_id(
@@ -292,6 +292,7 @@ class Sale:
 
         sale_data['invoice_method'] = ps_order_state.invoice_method
         sale_data['shipment_method'] = ps_order_state.shipment_method
+        sale_data['channel'] = site.channel.id
 
         lines_data = []
         for order_line in order_record.associations.order_rows.iterchildren():
@@ -466,9 +467,11 @@ class SaleLine:
         site = PrestashopSite(Transaction().context.get('prestashop_site'))
         return {
             'quantity': 1,
+            'product': site.shipping_product.id,
             'unit_price': Decimal(str(
                 order_record.total_shipping_tax_excl
             )).quantize(Decimal(10) ** - site.company.currency.digits),
+            'unit': site.shipping_product.default_uom.id,
             'description': 'Shipping Cost [Excl tax]',
         }
 

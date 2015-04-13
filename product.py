@@ -5,7 +5,7 @@
     :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_EVEN
 
 from trytond.model import ModelSQL, ModelView, fields
 from trytond.pool import PoolMeta, Pool
@@ -151,10 +151,15 @@ class Template:
         # tryton.
         unit, = Uom.search([('name', '=', 'Unit')], limit=1)
         with Transaction().set_context(language=site_lang.language.code):
+            # XXX: Rounding prices to 4 decimal places.
+            # In 3.6 rounding digites can be configured in tryton config
+            round_price = lambda price: Decimal(price).quantize(
+                Decimal('0.0001'), rounding=ROUND_HALF_EVEN
+            )
             template, = cls.create([{
                 'name': name_in_first_lang.pyval,
-                'list_price': Decimal(str(product_record.price)),
-                'cost_price': Decimal(str(product_record.wholesale_price)),
+                'list_price': round_price(str(product_record.price)),
+                'cost_price': round_price(str(product_record.wholesale_price)),
                 'salable': True,
                 'default_uom': unit.id,
                 'sale_uom': unit.id,

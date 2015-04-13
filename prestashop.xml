@@ -101,6 +101,10 @@
                         <field name="default_account_revenue" />
                         <label name="default_warehouse" />
                         <field name="default_warehouse" />
+                        <label name="channel" />
+                        <field name="channel" />
+                        <label name="shipping_product" />
+                        <field name="shipping_product" />
                         <newline/>
                         <notebook colspan="4">
                             <page string="Languages" id="languages">

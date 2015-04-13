@@ -83,7 +83,10 @@ requires = [
     'pystashop',
     'pytz',
 ]
-MODULE2PREFIX = {}
+MODULE2PREFIX = {
+    'sale_channel': 'openlabs',
+    'product_notebook': 'openlabs',
+}
 MODULE = "prestashop"
 PREFIX = "trytond"
 for dep in info.get('depends', []):

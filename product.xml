@@ -27,8 +27,10 @@ this repository contains the full copyright notices and license terms. -->
                 <![CDATA[
                 <data>
                     <xpath
-                        expr="/form/field[@name=&quot;description&quot;]" position="after">
+                        expr="/form/notebook" position="inside">
+                        <page string="Prestashop" col="4" id="prestashop">
                             <field name="prestashop_combination_ids" colspan="4"/>
+                        </page>
                     </xpath>
                 </data>
                 ]]>

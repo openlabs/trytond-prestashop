@@ -75,9 +75,12 @@ class BaseTestCase(unittest.TestCase):
         self.Currency = POOL.get('currency.currency')
         self.CurrencyRate = POOL.get('currency.currency.rate')
         self.ProductTemplate = POOL.get('product.template')
+        self.SaleChannel = POOL.get('sale.channel')
         self.TemplatePrestashop = POOL.get('product.template.prestashop')
         self.Product = POOL.get('product.product')
+        self.Category = POOL.get('product.category')
         self.ProductPrestashop = POOL.get('product.product.prestashop')
+        self.PriceList = POOL.get('product.price_list')
         self.Uom = POOL.get('product.uom')
         self.Sale = POOL.get('sale.sale')
         self.Location = POOL.get('stock.location')
@@ -100,6 +103,22 @@ class BaseTestCase(unittest.TestCase):
         )
         self.PaymentTerm = POOL.get('account.invoice.payment_term')
         self.User = POOL.get('res.user')
+
+    def _create_pricelists(self):
+        """
+        Create the pricelists
+        """
+        # Setup the pricelists
+        user_price_list, = self.PriceList.create([{
+            'name': 'PL 1',
+            'company': self.company.id,
+            'lines': [
+                ('create', [{
+                    'formula': 'unit_price * %s' % Decimal('1.10')
+                }])
+            ],
+        }])
+        return user_price_list.id
 
     def setup_defaults(self):
         "Setup defaults"
@@ -201,14 +220,63 @@ class BaseTestCase(unittest.TestCase):
             create_chart.properties.account_revenue = revenue
             create_chart.properties.account_expense = expense
             create_chart.transition_create_properties()
-
+            category, = self.Category.create([{
+                'name': 'Test Category',
+            }])
             self.Party.write(
                 [self.Party(self.company_party)], {
                     'account_payable': payable.id,
                     'account_receivable': receivable.id,
                 }
             )
+            uom, = self.Uom.search([('symbol', '=', 'u')])
+            shipping_product_template, = self.ProductTemplate.create([{
+                'name': 'Test Carrier Product',
+                'category': category.id,
+                'type': 'service',
+                'salable': True,
+                'sale_uom': uom,
+                'list_price': Decimal('10'),
+                'cost_price': Decimal('5'),
+                'default_uom': uom,
+                'cost_price_method': 'fixed',
+                'account_revenue': self.get_account_by_kind(
+                    'revenue').id,
+                'products': [
+                    ('create', self.ProductTemplate.default_products())
+                ]
+            }])
+            warehouse, = self.Location.search([
+                ('type', '=', 'warehouse')
+            ], limit=1)
+            self.payment_term, = self.PaymentTerm.create([{
+                'name': 'Direct',
+                'lines': [('create', [{'type': 'remainder'}])]
+            }])
+            self.price_list = self._create_pricelists()
+            channel1, channel2 = self.SaleChannel.create([{
+                'name': 'Channel 1',
+                'warehouse': warehouse.id,
+                'company': self.company.id,
+                'source': 'prestashop',
+                'currency': self.company.currency.id,
+                'price_list': self.price_list,
+                'invoice_method': 'manual',
+                'shipment_method': 'manual',
+                'payment_term': self.payment_term,
+            }, {
+                'name': 'Channel 2',
+                'warehouse': warehouse.id,
+                'company': self.company.id,
+                'source': 'prestashop',
+                'currency': self.company.currency.id,
+                'price_list': self.price_list,
+                'invoice_method': 'manual',
+                'shipment_method': 'manual',
+                'payment_term': self.payment_term,
+            }])
             self.site, = self.PrestashopSite.create([{
+                'channel': channel1,
                 'url': 'Some URL',
                 'key': 'A key',
                 'default_account_expense': self.get_account_by_kind(
@@ -216,12 +284,12 @@ class BaseTestCase(unittest.TestCase):
                 'default_account_revenue': self.get_account_by_kind(
                     'revenue').id,
                 'company': self.company.id,
-                'default_warehouse': self.Location.search(
-                    [('type', '=', 'warehouse')], limit=1
-                )[0].id,
+                'default_warehouse': warehouse.id,
+                'shipping_product': shipping_product_template.products[0].id,
                 'timezone': 'UTC',
             }])
             self.site_alt, = self.PrestashopSite.create([{
+                'channel': channel2,
                 'url': 'Some URL 2',
                 'key': 'A key 2',
                 'default_account_expense': self.get_account_by_kind(
@@ -232,6 +300,7 @@ class BaseTestCase(unittest.TestCase):
                 'default_warehouse': self.Location.search(
                     [('type', '=', 'warehouse')], limit=1
                 )[0].id,
+                'shipping_product': shipping_product_template.products[0].id,
                 'timezone': 'UTC',
             }])
             self.PaymentTerm.create([{
