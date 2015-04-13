@@ -1,0 +1,4 @@
+psycopg2
+
+# Install this package itself
+.

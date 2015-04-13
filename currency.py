@@ -2,7 +2,7 @@
 """
     currency
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from trytond.model import ModelSQL, fields
@@ -44,7 +44,8 @@ class CurrencyPrestashop(ModelSQL):
             'currency_not_found': 'Currency with code %s not found',
         })
         cls._sql_constraints += [
-            ('prestashop_id_site_uniq',
+            (
+                'prestashop_id_site_uniq',
                 'UNIQUE(prestashop_id, site)',
                 'Currency must be unique by prestashop id and site'
             )

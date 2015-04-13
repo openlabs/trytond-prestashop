@@ -4,7 +4,7 @@
 
     Test Prestashop integration with tryton.
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 import sys
@@ -29,8 +29,8 @@ from trytond.tests.test_tryton import POOL, DB_NAME, USER, CONTEXT, \
     test_view, test_depends
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
-from trytond.config import CONFIG
-CONFIG['data_path'] = '.'
+from trytond.config import config
+config.set('database', 'path', '/tmp')
 PS_VERSION = '1.5'
 
 
