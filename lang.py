@@ -2,7 +2,7 @@
 """
     lang
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from trytond.model import ModelSQL, ModelView, fields
@@ -20,22 +20,24 @@ class SiteLanguage(ModelSQL, ModelView):
     """Prestashop site language
 
     This model keeps a store of tryton languages corresponding to the
-    languages on prestashop as per prestashop site.
+    languages on prestashop as per prestashop channel.
     It determines what languages are allowed to be synced.
     """
     __name__ = 'prestashop.site.lang'
 
+    # TODO: Table name need to be renamed with migration
+
     name = fields.Char('Name', required=True, readonly=True)
     language = fields.Many2One('ir.lang', 'Language')
-    site = fields.Many2One(
-        'prestashop.site', 'Site', required=True, ondelete='CASCADE',
+    channel = fields.Many2One(
+        'sale.channel', 'Channel', required=True, ondelete='CASCADE',
     )
     prestashop_id = fields.Integer('Prestashop ID', required=True)
 
     @staticmethod
-    def default_site():
+    def default_channel():
         "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def __setup__(cls):
@@ -45,41 +47,41 @@ class SiteLanguage(ModelSQL, ModelView):
         })
         cls._sql_constraints += [(
             'prestashop_id_site_language_uniq',
-            'UNIQUE(prestashop_id, site, language)',
-            'Language must be unique by prestashop id and site'
+            'UNIQUE(prestashop_id, channel, language)',
+            'Language must be unique by prestashop id and channel'
         )]
 
     @classmethod
-    def get_site_languages(cls, site=None):
-        """Get the list of tryton languages for a site for which PS langs exist
-
-        :param site: Active record of site
-        :returns: List of active records of languages
+    def get_channel_languages(cls, channel=None):
         """
-        Site = Pool().get('prestashop.site')
+        Get the list of tryton languages for a channel for which PS langs exist
+        """
+        SaleChannel = Pool().get('sale.channel')
 
-        if not site:
-            site = Site(Transaction().context.get('prestashop_site'))
+        if not channel:
+            channel = SaleChannel(Transaction().context.get('current_channel'))
 
-        return cls.search([('site', '=', site.id)])
+        return cls.search([('channel', '=', channel.id)])
 
     @classmethod
     def search_using_ps_id(cls, prestashop_id):
-        """Search for a language using the given ps_id in the current site
+        """
+        Search for a language using the given ps_id in the current channel
 
         :param prestashop_id: Prestashop ID for the language
         :returns: Langauge record found or None
         """
         site_langs = cls.search([
             ('prestashop_id', '=', prestashop_id),
-            ('site', '=', Transaction().context.get('prestashop_site'))
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return site_langs and site_langs[0] or None
 
     @classmethod
     def create_using_ps_data(cls, lang_record):
-        """Create a record in `prestashop.site.lang` with the languages
+        """
+        Create a record in `prestashop.site.lang` with the languages
         corresponding to prestashop_id
 
         Tryton fetches the languages from prestashop and tries to find a best
@@ -106,9 +108,11 @@ class SiteLanguage(ModelSQL, ModelView):
         :return: Created record
         """
         Language = Pool().get('ir.lang')
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = Site(Transaction().context.get('prestashop_site'))
+        channel = SaleChannel(Transaction().context.get('current_channel'))
+
+        channel.validate_prestashop_channel()
 
         if lang_record.language_code.pyval == 'en':
             tryton_lang = Language.search([('code', '=', 'en_US')])
@@ -119,7 +123,7 @@ class SiteLanguage(ModelSQL, ModelView):
             ])
         site_lang, = SiteLanguage.create([{
             'name': lang_record.name.pyval,
-            'site': site.id,
+            'channel': channel.id,
             'prestashop_id': lang_record.id.pyval,
             'language': tryton_lang and tryton_lang[0].id or None,
         }])
@@ -133,7 +137,8 @@ class Language:
 
     @classmethod
     def get_using_ps_id(cls, prestashop_id):
-        """Return the language corresponding to the prestashop_id for the
+        """
+        Return the language corresponding to the prestashop_id for the
         current site in context
         If the language is not found, fetch it from remote.
         Try to link the remote language to a local language.
@@ -143,13 +148,15 @@ class Language:
         :returns: Active record of the language
         """
         SiteLanguage = Pool().get('prestashop.site.lang')
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
         site_language = SiteLanguage.search_using_ps_id(prestashop_id)
 
         if not site_language:
-            site = Site(Transaction().context.get('prestashop_site'))
-            client = site.get_prestashop_client()
+            channel = SaleChannel(Transaction().context.get('current_channel'))
+            channel.validate_prestashop_channel()
+
+            client = channel.get_prestashop_client()
             site_language = [SiteLanguage.create_using_ps_data(
                 client.languages.get(prestashop_id)
             )]

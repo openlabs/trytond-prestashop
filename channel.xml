@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<tryton>
+    <data>
+
+        <record model="ir.ui.view" id="prestashop_site_language_view_form">
+            <field name="model">prestashop.site.lang</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                    <form string="Prestashop Site Language">
+                        <label name="name" />
+                        <field name="name" />
+                        <label name="language" />
+                        <field name="language" />
+                        <label name="channel" />
+                        <field name="channel" />
+                    </form>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="prestashop_site_language_view_tree">
+            <field name="model">prestashop.site.lang</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                    <tree string="Prestashop Site Languages">
+                        <field name="name" />
+                        <field name="language" />
+                        <field name="channel" />
+                    </tree>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="prestashop_site_order_state_view_form">
+            <field name="model">prestashop.site.order_state</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                    <form string="Prestashop Site Order State">
+                        <label name="prestashop_state" />
+                        <field name="prestashop_state" />
+                        <label name="order_state" />
+                        <field name="order_state" />
+                        <label name="channel" />
+                        <field name="channel" />
+                        <separator string="Configuration" id="sepr_config"/>
+                        <label name="invoice_method" />
+                        <field name="invoice_method" />
+                        <label name="shipment_method" />
+                        <field name="shipment_method" />
+                    </form>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="prestashop_site_order_state_view_tree">
+            <field name="model">prestashop.site.order_state</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                    <tree string="Prestashop Site Order States">
+                        <field name="channel" />
+                        <field name="prestashop_state" />
+                        <field name="order_state" />
+                    </tree>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.action.wizard" id="wizard_prestashop_import_orders">
+          <field name="name">Import Prestahsop Orders</field>
+            <field name="wiz_name">prestashop.import_orders.wizard</field>
+            <field name="model">sale.channel</field>
+        </record>
+
+        <record model="ir.ui.view" id="prestashop_import_orders_wizard_view_form">
+            <field name="model">prestashop.import_orders.wizard.view</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <form string="Prestashop - Order Import Successful" col="2">
+                  <label name="orders_imported"/>
+                  <field name="orders_imported"/>
+                </form>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.action.wizard" id="wizard_prestashop_export_orders">
+          <field name="name">Export Orders to Prestashop</field>
+            <field name="wiz_name">channel.export_orders.wizard</field>
+            <field name="model">sale.channel</field>
+        </record>
+
+        <record model="ir.ui.view" id="prestashop_export_orders_wizard_view_form">
+            <field name="model">prestashop.export_orders.wizard.view</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <form string="Prestashop - Order Export Successful" col="2">
+                  <label name="orders_exported"/>
+                  <field name="orders_exported"/>
+                </form>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.action.wizard" id="wizard_prestashop_connection">
+          <field name="name">Prestashop Connection</field>
+            <field name="wiz_name">prestashop.connection.wizard</field>
+            <field name="model">sale.channel</field>
+        </record>
+
+        <record model="ir.ui.view" id="prestashop_connection_wizard_view_form">
+            <field name="model">prestashop.connection.wizard.view</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <form string="Prestashop Connection" col="2">
+                  <label id="status" string="Connection Successful!"/>
+                </form>
+                ]]>
+            </field>
+        </record>
+
+        <!-- Crons -->
+        <record model="res.user" id="user_prestashop">
+            <field name="login">user_cron_prestashop</field>
+            <field name="name">User Cron Prestashop</field>
+            <field name="signature"></field>
+            <field name="active" eval="False"/>
+        </record>
+
+        <record model="res.user-res.group"
+                id="user_prestashop_group_sale_admin">
+            <field name="user" ref="user_prestashop"/>
+            <field name="group" ref="sale.group_sale_admin"/>
+        </record>
+
+        <record model="ir.cron" id="cron_prestashop_import_orders">
+            <field name="name">Import Prestashop Orders</field>
+            <field name="request_user" ref="res.user_admin"/>
+            <field name="user" ref="user_prestashop"/>
+            <field name="active" eval="True"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="number_calls">-1</field>
+            <field name="repeat_missed" eval="True"/>
+            <field name="model">sale.channel</field>
+            <field name="function">import_prestashop_orders_using_cron</field>
+        </record>
+
+        <record model="ir.cron" id="cron_prestashop_export_orders">
+            <field name="name">Export Orders To Prestashop</field>
+            <field name="request_user" ref="res.user_admin"/>
+            <field name="user" ref="user_prestashop"/>
+            <field name="active" eval="True"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="number_calls">-1</field>
+            <field name="repeat_missed" eval="True"/>
+            <field name="model">sale.channel</field>
+            <field name="function">export_orders_to_prestashop_using_cron</field>
+        </record>
+
+    </data>
+</tryton>

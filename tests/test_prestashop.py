@@ -67,7 +67,7 @@ class BaseTestCase(unittest.TestCase):
     def setUp(self):
         "Setup"
         trytond.tests.test_tryton.install_module('prestashop')
-        self.PrestashopSite = POOL.get('prestashop.site')
+        self.SaleChannel = POOL.get('sale.channel')
         self.Party = POOL.get('party.party')
         self.Address = POOL.get('party.address')
         self.ContactMechanism = POOL.get('party.contact_mechanism')
@@ -240,8 +240,7 @@ class BaseTestCase(unittest.TestCase):
                 'cost_price': Decimal('5'),
                 'default_uom': uom,
                 'cost_price_method': 'fixed',
-                'account_revenue': self.get_account_by_kind(
-                    'revenue').id,
+                'account_revenue': self.get_account_by_kind('revenue').id,
                 'products': [
                     ('create', self.ProductTemplate.default_products())
                 ]
@@ -254,55 +253,44 @@ class BaseTestCase(unittest.TestCase):
                 'lines': [('create', [{'type': 'remainder'}])]
             }])
             self.price_list = self._create_pricelists()
-            channel1, channel2 = self.SaleChannel.create([{
+            self.channel, self.alt_channel = self.SaleChannel.create([{
                 'name': 'Channel 1',
                 'warehouse': warehouse.id,
                 'company': self.company.id,
                 'source': 'prestashop',
+                'prestashop_url': 'Some URL',
+                'prestashop_key': 'A key',
                 'currency': self.company.currency.id,
                 'price_list': self.price_list,
                 'invoice_method': 'manual',
                 'shipment_method': 'manual',
+                'shipping_product': shipping_product_template.products[0].id,
+                'timezone': 'UTC',
                 'payment_term': self.payment_term,
+                'default_account_expense':
+                    self.get_account_by_kind('expense').id,
+                'default_account_revenue':
+                    self.get_account_by_kind('revenue').id,
             }, {
                 'name': 'Channel 2',
                 'warehouse': warehouse.id,
                 'company': self.company.id,
                 'source': 'prestashop',
+                'prestashop_url': 'Some URL 2',
+                'prestashop_key': 'A key 2',
                 'currency': self.company.currency.id,
                 'price_list': self.price_list,
                 'invoice_method': 'manual',
                 'shipment_method': 'manual',
                 'payment_term': self.payment_term,
-            }])
-            self.site, = self.PrestashopSite.create([{
-                'channel': channel1,
-                'url': 'Some URL',
-                'key': 'A key',
-                'default_account_expense': self.get_account_by_kind(
-                    'expense').id,
-                'default_account_revenue': self.get_account_by_kind(
-                    'revenue').id,
-                'company': self.company.id,
-                'default_warehouse': warehouse.id,
                 'shipping_product': shipping_product_template.products[0].id,
                 'timezone': 'UTC',
+                'default_account_expense':
+                    self.get_account_by_kind('expense').id,
+                'default_account_revenue':
+                    self.get_account_by_kind('revenue').id,
             }])
-            self.site_alt, = self.PrestashopSite.create([{
-                'channel': channel2,
-                'url': 'Some URL 2',
-                'key': 'A key 2',
-                'default_account_expense': self.get_account_by_kind(
-                    'expense').id,
-                'default_account_revenue': self.get_account_by_kind(
-                    'revenue').id,
-                'company': self.company.id,
-                'default_warehouse': self.Location.search(
-                    [('type', '=', 'warehouse')], limit=1
-                )[0].id,
-                'shipping_product': shipping_product_template.products[0].id,
-                'timezone': 'UTC',
-            }])
+
             self.PaymentTerm.create([{
                 'name': 'Direct',
                 'lines': [('create', [{'type': 'remainder'}])]
@@ -328,12 +316,12 @@ class BaseTestCase(unittest.TestCase):
             raise Exception("Account not found")
         return accounts[0] if accounts else False
 
-    def setup_sites(self):
-        "Setup site"
-        self.PrestashopSite.import_languages([self.site])
-        self.PrestashopSite.import_order_states([self.site])
-        self.PrestashopSite.import_languages([self.site_alt])
-        self.PrestashopSite.import_order_states([self.site_alt])
+    def setup_channels(self):
+        "Setup channels"
+        self.SaleChannel.import_prestashop_languages([self.channel])
+        self.SaleChannel.import_prestashop_order_states([self.channel])
+        self.SaleChannel.import_prestashop_languages([self.alt_channel])
+        self.SaleChannel.import_prestashop_order_states([self.alt_channel])
 
 
 class TestPrestashop(BaseTestCase):
@@ -359,8 +347,8 @@ class TestPrestashop(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(ps_test=True):
-                self.PrestashopSite.test_connection([self.site])
-                self.PrestashopSite.test_connection([self.site_alt])
+                self.SaleChannel.test_prestashop_connection([self.channel])
+                self.SaleChannel.test_prestashop_connection([self.alt_channel])
 
             txn.cursor.rollback()
 
@@ -372,7 +360,7 @@ class TestPrestashop(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                ps_test=True, prestashop_site=self.site.id
+                ps_test=True, current_channel=self.channel.id
             ):
                 # No language imported yet
                 self.assertEqual(
@@ -408,10 +396,10 @@ class TestPrestashop(BaseTestCase):
                 )
 
                 self.assertEqual(
-                    len(self.LangPrestashop.get_site_languages()), 2
+                    len(self.LangPrestashop.get_channel_languages()), 2
                 )
 
-    def test_0030_import_order_states(self):
+    def test_0030_import_prestashop_order_states(self):
         """Test the import of order states
         """
         with Transaction().start(DB_NAME, USER, context=CONTEXT):
@@ -419,9 +407,9 @@ class TestPrestashop(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                ps_test=True, prestashop_site=self.site.id
+                ps_test=True, current_channel=self.channel.id
             ):
-                self.PrestashopSite.import_languages([self.site])
+                self.SaleChannel.import_prestashop_languages([self.channel])
                 # No state imported yet
                 self.assertEqual(
                     self.PrestashopOrderState.search_using_ps_id(1), None
@@ -453,8 +441,9 @@ class TestPrestashop(BaseTestCase):
                         state.prestashop_state, 'Awaits cheque paymento'
                     )
 
-    def test_0040_setup_site(self):
-        """Test the setup of site which imports languages and order states
+    def test_0040_setup_channel(self):
+        """
+        Test the setup of channel which imports languages and order states
         for mapping
         """
         with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
@@ -467,78 +456,82 @@ class TestPrestashop(BaseTestCase):
             with Transaction().set_context(ps_test=True):
                 self.assertRaises(
                     UserError,
-                    self.PrestashopSite.import_order_states, [self.site]
+                    self.SaleChannel.import_prestashop_order_states,
+                    [self.channel]
                 )
 
-                self.PrestashopSite.import_languages([self.site])
+                self.SaleChannel.import_prestashop_languages([self.channel])
 
                 self.assertTrue(len(self.LangPrestashop.search([])) > 0)
 
-                self.PrestashopSite.import_order_states([self.site])
+                self.SaleChannel.import_prestashop_order_states([self.channel])
 
                 self.assertTrue(len(self.PrestashopOrderState.search([])) > 0)
 
             txn.cursor.rollback()
 
-    def test_0050_setup_multi_site(self):
-        """Test the setup of multiple sites where import of languages and
-        order states should be correct according to site
+    def test_0050_setup_multi_channel(self):
+        """Test the setup of multiple channels where import of languages and
+        order states should be correct according to channel
         """
         with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
             # Call method to setup defaults
             self.setup_defaults()
 
-            # No record exists for any site
+            # No record exists for any channel
             self.assertEqual(len(self.LangPrestashop.search([])), 0)
             self.assertEqual(len(self.PrestashopOrderState.search([])), 0)
 
             with Transaction().set_context(ps_test=True):
 
-                # Same behaviour by both site when no order states are there
+                # Same behaviour by both channel when no order states are there
                 self.assertRaises(
                     UserError,
-                    self.PrestashopSite.import_order_states, [self.site]
+                    self.SaleChannel.import_prestashop_order_states,
+                    [self.channel]
                 )
                 self.assertRaises(
                     UserError,
-                    self.PrestashopSite.import_order_states, [self.site_alt]
+                    self.SaleChannel.import_prestashop_order_states,
+                    [self.alt_channel]
                 )
 
-                # Import languages for first site, the second one should still
-                # raise an user error as before
-                self.PrestashopSite.import_languages([self.site])
+                # Import languages for first channel, the second one should
+                # still raise an user error as before
+                self.SaleChannel.import_prestashop_languages([self.channel])
 
                 self.assertTrue(len(self.LangPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])) > 0)
 
                 with Transaction().set_context(
-                    prestashop_site=self.site.id
+                    current_channel=self.channel.id
                 ):
                     self.assertEqual(
                         self.Lang.get_using_ps_id(1).code, 'en_US'
                     )
 
                 self.assertTrue(len(self.LangPrestashop.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])) == 0)
                 self.assertRaises(
                     UserError,
-                    self.PrestashopSite.import_order_states, [self.site_alt]
+                    self.SaleChannel.import_prestashop_order_states,
+                    [self.alt_channel]
                 )
 
-                # Languages cannot be imported again for first site but for
+                # Languages cannot be imported again for first channel but for
                 # second it can be imported
-                self.PrestashopSite.import_languages([self.site_alt])
+                self.SaleChannel.import_prestashop_languages([self.alt_channel])
 
-                # Import order states for first site only
-                self.PrestashopSite.import_order_states([self.site])
+                # Import order states for first channel only
+                self.SaleChannel.import_prestashop_order_states([self.channel])
 
                 self.assertTrue(len(self.PrestashopOrderState.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])) > 0)
                 self.assertTrue(len(self.PrestashopOrderState.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])) == 0)
 
             txn.cursor.rollback()
