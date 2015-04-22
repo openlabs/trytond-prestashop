@@ -2,7 +2,7 @@
 """
     test_party
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 import unittest
@@ -27,18 +27,17 @@ class TestProduct(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                prestashop_site=self.site.id, ps_test=True,
-                current_channel=self.site.channel.id
+                current_channel=self.channel.id, ps_test=True,
             ):
-                self.setup_sites()
+                self.setup_channels()
 
                 self.assertEqual(len(self.ProductTemplate.search([])), 1)
                 self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.Product.search([])), 1)
                 self.assertEqual(len(self.ProductPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
 
                 product_data = get_objectified_xml('products', 1)
@@ -49,11 +48,11 @@ class TestProduct(BaseTestCase):
                 # is created by template and other by this combination
                 self.assertEqual(len(self.ProductTemplate.search([])), 2)
                 self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.Product.search([])), 2)
                 self.assertEqual(len(self.ProductPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
 
                 # Product name should be in english and french
@@ -100,10 +99,10 @@ class TestProduct(BaseTestCase):
 
                 # Nothing should be created under site_alt
                 self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 0)
                 self.assertEqual(len(self.ProductPrestashop.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 0)
 
     def test_0020_product_import(self):
@@ -114,18 +113,17 @@ class TestProduct(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                prestashop_site=self.site.id, ps_test=True,
-                current_channel=self.site.channel.id
+                current_channel=self.channel.id, ps_test=True,
             ):
-                self.setup_sites()
+                self.setup_channels()
 
                 self.assertEqual(len(self.ProductTemplate.search([])), 1)
                 self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.Product.search([])), 1)
                 self.assertEqual(len(self.ProductPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
 
                 product = self.Product.find_or_create_using_ps_data(
@@ -135,11 +133,11 @@ class TestProduct(BaseTestCase):
                 # is created by template and other by this combination
                 self.assertEqual(len(self.ProductTemplate.search([])), 2)
                 self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.Product.search([])), 3)
                 self.assertEqual(len(self.ProductPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 2)
 
                 # Try importing the same product again, it should NOT create a
@@ -165,10 +163,10 @@ class TestProduct(BaseTestCase):
 
                 # Nothing should be created under site_alt
                 self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 0)
                 self.assertEqual(len(self.ProductPrestashop.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 0)
 
 

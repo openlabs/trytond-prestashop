@@ -28,9 +28,10 @@ class SiteOrderState(ModelSQL, ModelView):
     __name__ = 'prestashop.site.order_state'
     _rec_name = 'prestashop_state'
 
-    site = fields.Many2One(
-        'prestashop.site', 'Prestashop Site', readonly=True,
-        ondelete='CASCADE',
+    # TODO: Table name need to be renamed with migration
+
+    channel = fields.Many2One(
+        'sale.channel', 'Channel', readonly=True, ondelete='CASCADE',
     )
     prestashop_id = fields.Integer('Prestashop ID', required=True)
     prestashop_state = fields.Char(
@@ -63,9 +64,9 @@ class SiteOrderState(ModelSQL, ModelView):
         return True
 
     @staticmethod
-    def default_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+    def default_channel():
+        "Return default channel from context"
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def __setup__(cls):
@@ -73,28 +74,34 @@ class SiteOrderState(ModelSQL, ModelView):
         super(SiteOrderState, cls).__setup__()
         cls._sql_constraints += [
             (
-                'prestashop_id_site_uniq', 'UNIQUE(prestashop_id, site)',
-                'Prestashop State must be unique for a prestashop site'
+                'prestashop_id_channel_uniq', 'UNIQUE(prestashop_id, channel)',
+                'Prestashop State must be unique for a prestashop channel'
             )
         ]
 
     @classmethod
     def search_using_ps_id(cls, prestashop_id):
-        """Search for a order state using the given ps_id in the current site
+        """Search for a order state using the given ps_id in the current channel
 
         :param prestashop_id: Prestashop ID for the order state
         :returns: Site order state record found or None
         """
-        site_order_states = cls.search([
+        SaleChannel = Pool().get('sale.channel')
+
+        current_channel = SaleChannel(Transaction().context['current_channel'])
+
+        current_channel.validate_prestashop_channel()
+        channel_order_states = cls.search([
             ('prestashop_id', '=', prestashop_id),
-            ('site', '=', Transaction().context.get('prestashop_site'))
+            ('channel', '=', current_channel.id)
         ])
 
-        return site_order_states and site_order_states[0] or None
+        return channel_order_states and channel_order_states[0] or None
 
     @classmethod
     def get_tryton_state(cls, name):
-        """Get the tryton state corresponding to the prestashop state
+        """
+        Get the tryton state corresponding to the prestashop state
         as per the predefined logic
         This method currently expects the value of name to be in US English.
 
@@ -145,10 +152,14 @@ class SiteOrderState(ModelSQL, ModelView):
         :param state_data: Objectified XML data for order state
         :return: Created record
         """
-        Site = Pool().get('prestashop.site')
         SiteLanguage = Pool().get('prestashop.site.lang')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = Site(Transaction().context.get('prestashop_site'))
+        channel = SaleChannel(
+            Transaction().context['current_channel']
+        )
+
+        channel.validate_prestashop_channel()
 
         # The name of a state can be in multiple languages
         # If the name is in more than one language, create the record with
@@ -163,12 +174,12 @@ class SiteOrderState(ModelSQL, ModelView):
         )
         with Transaction().set_context(language=site_lang.language.code):
             vals = {
-                'site': site.id,
+                'channel': channel.id,
                 'prestashop_id': state_data.id.pyval,
                 'prestashop_state': name_in_first_lang.pyval,
             }
             vals.update(cls.get_tryton_state(name_in_first_lang.pyval))
-            site_order_state = cls.create([vals])[0]
+            channel_order_state = cls.create([vals])[0]
 
         # If there is only lang, control wont go to this loop
         for name_in_lang in name_in_langs:
@@ -179,10 +190,10 @@ class SiteOrderState(ModelSQL, ModelView):
             if not site_lang:
                 continue
             with Transaction().set_context(language=site_lang.language.code):
-                cls.write([site_order_state], {
+                cls.write([channel_order_state], {
                     'prestashop_state': name_in_lang.pyval,
                 })
-        return site_order_state
+        return channel_order_state
 
 
 class Sale:
@@ -190,14 +201,6 @@ class Sale:
     __name__ = 'sale.sale'
 
     prestashop_id = fields.Integer('Prestashop ID', readonly=True)
-    prestashop_site = fields.Many2One(
-        'prestashop.site', 'Prestashop Site', readonly=True
-    )
-
-    @staticmethod
-    def default_prestashop_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
 
     @classmethod
     def __setup__(cls):
@@ -205,14 +208,14 @@ class Sale:
         super(Sale, cls).__setup__()
         cls._sql_constraints += [
             (
-                'prestashop_id_site_uniq',
-                'UNIQUE(prestashop_id, prestashop_site)',
-                'Sale must be unique by prestashop id and site'
+                'prestashop_id_channel_uniq',
+                'UNIQUE(prestashop_id, channel)',
+                'Sale must be unique by prestashop id and channel'
             )
         ]
         cls._error_messages.update({
-            'prestashop_site_not_found':
-            'Prestashop client not found in context'
+            'prestashop_client_not_found':
+                'Prestashop client not found in context'
         })
 
     @classmethod
@@ -240,12 +243,14 @@ class Sale:
         Party = Pool().get('party.party')
         Address = Pool().get('party.address')
         Line = Pool().get('sale.line')
-        PrestashopSite = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
         Currency = Pool().get('currency.currency')
         SiteOrderState = Pool().get('prestashop.site.order_state')
 
-        site = PrestashopSite(Transaction().context.get('prestashop_site'))
-        client = site.get_prestashop_client()
+        channel = SaleChannel(Transaction().context['current_channel'])
+
+        channel.validate_prestashop_channel()
+        client = channel.get_prestashop_client()
 
         if not client:
             cls.raise_user_error('prestashop_site_not_found')
@@ -255,12 +260,12 @@ class Sale:
         )
 
         # Get the sale date and convert the time to UTC from the application
-        # timezone set on site
+        # timezone set on channel
         sale_time = datetime.strptime(
             order_record.date_add.pyval, '%Y-%m-%d %H:%M:%S'
         )
-        site_tz = pytz.timezone(site.timezone)
-        sale_time_utc = pytz.utc.normalize(site_tz.localize(sale_time))
+        channel_tz = pytz.timezone(channel.timezone)
+        sale_time_utc = pytz.utc.normalize(channel_tz.localize(sale_time))
 
         inv_address = Address.find_or_create_for_party_using_ps_data(
             party,
@@ -277,9 +282,6 @@ class Sale:
             'party': party.id,
             'invoice_address': inv_address.id,
             'shipment_address': ship_address.id,
-            'warehouse':
-                site.default_warehouse and site.default_warehouse.id
-                or None,
             'prestashop_id': order_record.id.pyval,
             'currency': Currency.get_using_ps_id(
                 order_record.id_currency.pyval
@@ -292,7 +294,7 @@ class Sale:
 
         sale_data['invoice_method'] = ps_order_state.invoice_method
         sale_data['shipment_method'] = ps_order_state.shipment_method
-        sale_data['channel'] = site.channel.id
+        sale_data['channel'] = channel.id
 
         lines_data = []
         for order_line in order_record.associations.order_rows.iterchildren():
@@ -327,7 +329,7 @@ class Sale:
         """
         Sale = Pool().get('sale.sale')
 
-        self.prestashop_site.get_prestashop_client()
+        self.channel.get_prestashop_client()
 
         # Cancel the order if its cancelled on prestashop
         if order_state.order_state == 'sale.cancel':
@@ -351,10 +353,7 @@ class Sale:
         """
         sales = cls.search([
             ('prestashop_id', '=', order_record.id.pyval),
-            (
-                'prestashop_site', '=',
-                Transaction().context.get('prestashop_site')
-            )
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return sales and sales[0] or None
@@ -366,7 +365,7 @@ class Sale:
         """
         SiteOrderState = Pool().get('prestashop.site.order_state')
 
-        client = self.prestashop_site.get_prestashop_client()
+        client = self.channel.get_prestashop_client()
 
         def get_state(state_id):
             "Returns the id of prestashop state corresponding to tryton state"
@@ -374,15 +373,15 @@ class Sale:
                 filters={'id': state_id}, as_ids=True
             )[0]
 
-        # Get the corresponding PS state from site order states as the state
+        # Get the corresponding PS state from channel order states as the state
         # of state
-        site_order_state = SiteOrderState.search([
+        channel_order_state = SiteOrderState.search([
             ('order_state', '=', 'sale.' + self.state)
         ])
-        if not site_order_state:
+        if not channel_order_state:
             return
         else:
-            prestashop_state = get_state(site_order_state[0].prestashop_id)
+            prestashop_state = get_state(channel_order_state[0].prestashop_id)
 
         order = client.orders.get(self.prestashop_id)
         order.current_state = prestashop_state
@@ -404,10 +403,12 @@ class SaleLine:
         """
         Product = Pool().get('product.product')
         Template = Pool().get('product.template')
-        PrestashopSite = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = PrestashopSite(Transaction().context.get('prestashop_site'))
-        client = site.get_prestashop_client()
+        channel = SaleChannel(Transaction().context['current_channel'])
+        channel.validate_prestashop_channel()
+
+        client = channel.get_prestashop_client()
 
         # If the product sold is a variant, then get product from
         # product.product
@@ -441,7 +442,7 @@ class SaleLine:
             'unit': product.sale_uom.id,
             'unit_price': Decimal(str(
                 order_details.unit_price_tax_excl
-            )).quantize(Decimal(10) ** - site.company.currency.digits),
+            )).quantize(Decimal(10) ** - channel.company.currency.digits),
             'description': order_details.product_name.pyval,
         }
 
@@ -462,16 +463,16 @@ class SaleLine:
         :param order_row_record: Objectified XML record sent by pystashop
         :returns: Sale line dictionary of values
         """
-        PrestashopSite = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = PrestashopSite(Transaction().context.get('prestashop_site'))
+        channel = SaleChannel(Transaction().context['current_channel'])
         return {
             'quantity': 1,
-            'product': site.shipping_product.id,
+            'product': channel.shipping_product.id,
             'unit_price': Decimal(str(
                 order_record.total_shipping_tax_excl
-            )).quantize(Decimal(10) ** - site.company.currency.digits),
-            'unit': site.shipping_product.default_uom.id,
+            )).quantize(Decimal(10) ** - channel.company.currency.digits),
+            'unit': channel.shipping_product.default_uom.id,
             'description': 'Shipping Cost [Excl tax]',
         }
 
@@ -482,13 +483,13 @@ class SaleLine:
         :param order_row_record: Objectified XML record sent by pystashop
         :returns: Sale line dictionary of values
         """
-        PrestashopSite = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = PrestashopSite(Transaction().context.get('prestashop_site'))
+        channel = SaleChannel(Transaction().context['current_channel'])
         return {
             'quantity': 1,
             'unit_price': -Decimal(str(
                 order_record.total_discounts_tax_excl
-            )).quantize(Decimal(10) ** - site.company.currency.digits),
+            )).quantize(Decimal(10) ** - channel.company.currency.digits),
             'description': 'Discount',
         }

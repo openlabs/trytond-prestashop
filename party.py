@@ -19,8 +19,8 @@ class Party:
     __name__ = 'party.party'
 
     prestashop_id = fields.Integer('Prestashop ID', readonly=True)
-    prestashop_site = fields.Many2One(
-        'prestashop.site', 'Prestashop Site', readonly=True
+    channel = fields.Many2One(
+        'sale.channel', 'Channel', readonly=True
     )
 
     @classmethod
@@ -29,16 +29,16 @@ class Party:
         super(Party, cls).__setup__()
         cls._sql_constraints += [
             (
-                'prestashop_id_site_uniq',
-                'UNIQUE(prestashop_id, prestashop_site)',
-                'Party must be unique by prestashop id and site'
+                'prestashop_id_channel_uniq',
+                'UNIQUE(prestashop_id, channel)',
+                'Party must be unique by prestashop id and channel'
             )
         ]
 
     @staticmethod
-    def default_prestashop_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+    def default_channel():
+        "Return default channel from context"
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def find_or_create_using_ps_data(cls, customer_record):
@@ -87,16 +87,14 @@ class Party:
     def get_party_using_ps_data(cls, customer_record):
         """Find a party in Tryton which matches the details
         of this customer_record.
-        By default it just matches the prestashop_id and site
+        By default it just matches the prestashop_id and channel
 
         :param customer_record: Objectified XML record sent by prestashop
         :returns: Active record if a party is found else None
         """
         party = cls.search([
             ('prestashop_id', '=', customer_record.id.pyval),
-            ('prestashop_site', '=', Transaction().context.get(
-                'prestashop_site'
-            ))
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return party and party[0] or None
@@ -107,22 +105,22 @@ class Address:
     __name__ = 'party.address'
 
     prestashop_id = fields.Integer('Prestashop ID', readonly=True)
-    prestashop_site = fields.Function(
-        fields.Many2One('prestashop.site', 'Prestashop Site', readonly=True),
-        'get_prestashop_site'
+    channel = fields.Function(
+        fields.Many2One('sale.channel', 'Channel'),
+        'get_prestashop_channel'
     )
 
-    def get_prestashop_site(self, name):
-        """Return the site from the party as site on party is site on address
+    def get_prestashop_channel(self, name):
+        """Return the channel from the party
 
         :param name: Name of the field
         """
-        return self.party.prestashop_site and self.party.prestashop_site.id \
-            or None
+        return self.party.channel and self.party.channel.id or None
 
     @classmethod
     def find_or_create_for_party_using_ps_data(
-            cls, party, address_record):
+        cls, party, address_record
+    ):
         """Look for the address in tryton corresponding to the address_record.
         If found, return the same else create a new one and return that.
 

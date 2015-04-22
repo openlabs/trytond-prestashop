@@ -28,14 +28,14 @@ class TestParty(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                prestashop_site=self.site.id, ps_test=True
+                current_channel=self.channel.id, ps_test=True
             ):
-                self.setup_sites()
+                self.setup_channels()
 
-                self.site.get_prestashop_client()
+                self.channel.get_prestashop_client()
 
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
 
@@ -43,12 +43,12 @@ class TestParty(BaseTestCase):
                 customer_data = get_objectified_xml('customers', 1)
                 party = self.Party.create_using_ps_data(customer_data)
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 1)
 
                 # Assert that the language set on party is same as the language
-                # in site languages
+                # in channel languages
                 self.assertEqual(
                     party.lang,
                     self.Lang.get_using_ps_id(customer_data.id_lang.pyval)
@@ -60,7 +60,7 @@ class TestParty(BaseTestCase):
                     customer_data
                 )
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 1)
 
@@ -80,20 +80,20 @@ class TestParty(BaseTestCase):
                 )
 
             with Transaction().set_context(
-                prestashop_site=self.site_alt.id, ps_test=True
+                current_channel=self.alt_channel.id, ps_test=True
             ):
-                self.site_alt.get_prestashop_client()
+                self.alt_channel.get_prestashop_client()
 
-                # Nothing should be linked to site_alt
+                # Nothing should be linked to alt_channel
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 0)
 
                 # Create a party using prestashop data
                 customer_data = get_objectified_xml('customers', 1)
                 party = self.Party.create_using_ps_data(customer_data)
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 1)
 
     def test_0020_address_import_n_matching(self):
@@ -104,18 +104,18 @@ class TestParty(BaseTestCase):
             self.setup_defaults()
 
             with Transaction().set_context(
-                prestashop_site=self.site.id, ps_test=True
+                current_channel=self.channel.id, ps_test=True
             ):
-                self.setup_sites()
+                self.setup_channels()
 
-                self.site.get_prestashop_client()
+                self.channel.get_prestashop_client()
 
                 self.assertEqual(len(self.Address.search([
-                    ('party.prestashop_site', '=', self.site.id)
+                    ('party.channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
                 self.assertEqual(len(self.CountryPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
 
                 # Create a party
@@ -133,11 +133,11 @@ class TestParty(BaseTestCase):
                     party, address_data
                 )
                 self.assertEqual(len(self.Address.search([
-                    ('party.prestashop_site', '=', self.site.id)
+                    ('party.channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
                 self.assertEqual(len(self.CountryPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
 
                 # Make sure the country cached is the right one
@@ -154,11 +154,11 @@ class TestParty(BaseTestCase):
                         party, get_objectified_xml('addresses', 2)
                     )
                 self.assertEqual(len(self.Address.search([
-                    ('party.prestashop_site', '=', self.site.id)
+                    ('party.channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
                 self.assertEqual(len(self.CountryPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
 
                 # Test with an exactly same address with same ID
@@ -204,7 +204,7 @@ class TestParty(BaseTestCase):
 
                 # No subdivision has been cached till now
                 self.assertEqual(len(self.SubdivisionPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
 
                 get_objectified_xml('states', 1)
@@ -212,18 +212,18 @@ class TestParty(BaseTestCase):
                 # Cache a subdivision
                 subdivision = self.Subdivision.cache_prestashop_id(1)
                 self.assertEqual(len(self.SubdivisionPrestashop.search([
-                    ('site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(
                     self.Subdivision.get_using_ps_id(1).id, subdivision.id
                 )
 
-                # Nothing should be created under site_alt
+                # Nothing should be created under alt_channel
                 self.assertEqual(len(self.Address.search([
-                    ('party.prestashop_site', '=', self.site_alt.id)
+                    ('party.channel', '=', self.alt_channel.id)
                 ])), 0)
                 self.assertEqual(len(self.CountryPrestashop.search([
-                    ('site', '=', self.site_alt.id)
+                    ('channel', '=', self.alt_channel.id)
                 ])), 0)
 
 

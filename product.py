@@ -2,7 +2,7 @@
 """
     product
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2013-2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from decimal import Decimal, ROUND_HALF_EVEN
@@ -17,11 +17,12 @@ __metaclass__ = PoolMeta
 
 
 class TemplatePrestashop(ModelSQL, ModelView):
-    """Product Template - Prestashop site store
+    """Product Template - Prestashop Channel store
 
-    A template can be available on more than one sites on prestashop as product
-    This model keeps a record of a template's association with a site and the
-    ID of product on that site
+    A template can be available on more than one channel on prestashop as
+    product.
+    This model keeps a record of a template's association with a channel and the
+    ID of product on that channel
     """
     __name__ = 'product.template.prestashop'
 
@@ -30,9 +31,9 @@ class TemplatePrestashop(ModelSQL, ModelView):
         'Prestashop ID', readonly=True, required=True
     )
 
-    #: The prestashop site
-    site = fields.Many2One(
-        'prestashop.site', 'Prestashop Site', readonly=True, required=True
+    #: The prestashop channel
+    channel = fields.Many2One(
+        'sale.channel', 'Sale Channel', readonly=True, required=True
     )
 
     #: Product template in tryton
@@ -41,9 +42,9 @@ class TemplatePrestashop(ModelSQL, ModelView):
     )
 
     @staticmethod
-    def default_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+    def default_channel():
+        "Return default channel from context"
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def __setup__(cls):
@@ -51,9 +52,9 @@ class TemplatePrestashop(ModelSQL, ModelView):
         super(TemplatePrestashop, cls).__setup__()
         cls._sql_constraints += [
             (
-                'prestashop_id_site_uniq',
-                'UNIQUE(prestashop_id, site)',
-                'Template must be unique by prestashop id and site'
+                'prestashop_id_channle_uniq',
+                'UNIQUE(prestashop_id, channel)',
+                'Template must be unique by prestashop id and channel'
             )
         ]
 
@@ -107,10 +108,10 @@ class Template:
         """
         Product = Pool().get('product.product')
         Uom = Pool().get('product.uom')
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
         SiteLang = Pool().get('prestashop.site.lang')
 
-        site = Site(Transaction().context.get('prestashop_site'))
+        channel = SaleChannel(Transaction().context['current_channel'])
 
         # The name of a product can be in multiple languages
         # If the name is in more than one language, create the record with
@@ -163,8 +164,8 @@ class Template:
                 'salable': True,
                 'default_uom': unit.id,
                 'sale_uom': unit.id,
-                'account_expense': site.default_account_expense.id,
-                'account_revenue': site.default_account_revenue.id,
+                'account_expense': channel.default_account_expense.id,
+                'account_revenue': channel.default_account_revenue.id,
                 'products': [('create', [variant_data])],
                 'prestashop_ids': [('create', [{
                     'prestashop_id': product_record.id.pyval,
@@ -206,7 +207,7 @@ class Template:
         of this product_record. This search is made in the
         TemplatePrestashop store.
 
-        By default, it matches the prestashop_id and site.
+        By default, it matches the prestashop_id and channel.
 
         :param product_record: Objectified XML record sent by pystashop
         :returns: Active record if a template is found else None
@@ -215,7 +216,7 @@ class Template:
 
         records = TemplatePrestashop.search([
             ('prestashop_id', '=', product_record.id.pyval),
-            ('site', '=', Transaction().context.get('prestashop_site'))
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return records and records[0].template or None
@@ -226,7 +227,7 @@ class Template:
         product_record_id. This search is made in the
         TemplatePrestashop store.
 
-        By default, it matches the prestashop_id and site.
+        By default, it matches the prestashop_id and channel.
 
         :param product_record_id: Product ID on prestashop
         :returns: Active record if a template is found else None
@@ -235,20 +236,20 @@ class Template:
 
         records = TemplatePrestashop.search([
             ('prestashop_id', '=', product_record_id),
-            ('site', '=', Transaction().context.get('prestashop_site'))
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return records and records[0].template or None
 
 
 class ProductPrestashop(ModelSQL, ModelView):
-    """Product Variant - Prestashop site store
+    """Product Variant - Prestashop Channel store
 
-    A product variant can be available on more than one sites on prestashop
+    A product variant can be available on more than one channels on prestashop
     as combination. Combination IDs on prestashop are unique throughout
-    the site.
-    This model keeps a record of a variant's association with a site and the
-    ID of combination on that site
+    the channel.
+    This model keeps a record of a variant's association with a channel and the
+    ID of combination on that channel
     """
     __name__ = 'product.product.prestashop'
 
@@ -257,9 +258,9 @@ class ProductPrestashop(ModelSQL, ModelView):
         'Prestashop Combination ID', readonly=True, required=True
     )
 
-    #: The prestashop site
-    site = fields.Many2One(
-        'prestashop.site', 'Prestashop Site', readonly=True, required=True
+    #: The prestashop channel
+    channel = fields.Many2One(
+        'sale.channel', 'Channel', readonly=True, required=True
     )
 
     #: Product/Variant in tryton
@@ -267,10 +268,12 @@ class ProductPrestashop(ModelSQL, ModelView):
         'product.product', 'Product Variant', readonly=True, required=True
     )
 
+    # TODO: Reuse channel listings here
+
     @staticmethod
-    def default_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+    def default_channel():
+        "Return default channel from context"
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def __setup__(cls):
@@ -280,11 +283,11 @@ class ProductPrestashop(ModelSQL, ModelView):
             'duplicate_combination': (
                 'Combination with id '
                 '"%(combination_id)s" exists for template "%(template)s" '
-                'in %(site)s'
+                'in %(channel)s'
             ),
-            'duplicate_combination_across_site': (
+            'duplicate_combination_across_channel': (
                 'Combination with id '
-                '"%(combination_id)s" exists in site "%(site)s"'
+                '"%(combination_id)s" exists in channel "%(channel)s"'
             ),
         })
 
@@ -303,37 +306,35 @@ class ProductPrestashop(ModelSQL, ModelView):
         """Performs two checks
 
         1. Checks that this combination is unique within the template.
-        2. Checks that this combination is unique throughout the site if
+        2. Checks that this combination is unique throughout the channel if
            the combination id from prestashop is non zero.
         """
         # Check that this combination is unique within the template
         if len(ProductPrestashop.search([
-            ('prestashop_combination_id', '=',
-                self.prestashop_combination_id),
-            ('site', '=', self.site),
-            ('product.template', '=', self.product.template)
+            ('prestashop_combination_id', '=', self.prestashop_combination_id),
+            ('channel', '=', self.channel.id),
+            ('product.template', '=', self.product.template.id)
         ])) > 1:
             self.raise_user_error(
                 'duplicate_combination', {
                     'combination_id': self.prestashop_combination_id,
                     'template': self.product.template.name,
-                    'site': self.site.url,
+                    'channel': self.channel.url,
                 }
             )
-        # Check that this combination is unique throughout the site if
+        # Check that this combination is unique throughout the channel if
         # the combination id from prestashop is non zero
         if self.prestashop_combination_id != 0 and len(
             ProductPrestashop.search([
                 ('prestashop_combination_id', '=',
                     self.prestashop_combination_id),
-                ('site', '=', self.site),
-            ]
-            )
+                ('channel', '=', self.channel.id),
+            ])
         ) > 1:
             self.raise_user_error(
-                'duplicate_combination_across_site', {
+                'duplicate_combination_across_channel', {
                     'combination_id': self.prestashop_combination_id,
-                    'site': self.site.url,
+                    'channel': self.channel.url,
                 }
             )
         return True
@@ -374,14 +375,16 @@ class Product:
         :returns: Active record of created product
         """
         Template = Pool().get('product.template')
-        PrestashopSite = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = PrestashopSite(Transaction().context.get('prestashop_site'))
-        client = site.get_prestashop_client()
+        channel = SaleChannel(Transaction().context['current_channel'])
+        channel.validate_prestashop_channel()
 
-        template = Template.find_or_create_using_ps_data(client.products.get(
-            combination_record.id_product.pyval
-        ))
+        client = channel.get_prestashop_client()
+
+        template = Template.find_or_create_using_ps_data(
+            client.products.get(combination_record.id_product.pyval)
+        )
         product, = cls.create([{
             'template': template.id,
             'code': combination_record.reference.pyval or None,
@@ -396,7 +399,7 @@ class Product:
     def get_product_using_ps_data(cls, combination_record):
         """Find an existing product in Tryton which matches the details
         of this combination_record.
-        By default, it matches the prestashop_combination_id and site.
+        By default, it matches the prestashop_combination_id and channel.
 
         :param combination_record: Objectified XML record sent by pystashop
         :returns: Active record if a product is found else None
@@ -405,7 +408,7 @@ class Product:
 
         records = ProductPrestashop.search([
             ('prestashop_combination_id', '=', combination_record.id.pyval),
-            ('site', '=', Transaction().context.get('prestashop_site'))
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return records and records[0].product or None
@@ -414,7 +417,7 @@ class Product:
     def get_product_using_ps_id(cls, combination_record_id):
         """Find an existing product in Tryton which matches the
         combination_record_id.
-        By default, it matches the prestashop_combination_id and site.
+        By default, it matches the prestashop_combination_id and channel.
 
         :param combination_record_id: Combination ID on prestashop
         :returns: Active record if a product is found else None
@@ -423,7 +426,7 @@ class Product:
 
         records = ProductPrestashop.search([
             ('prestashop_combination_id', '=', combination_record_id),
-            ('site', '=', Transaction().context.get('prestashop_site'))
+            ('channel', '=', Transaction().context.get('current_channel'))
         ])
 
         return records and records[0].product or None
