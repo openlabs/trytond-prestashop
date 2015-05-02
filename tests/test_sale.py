@@ -82,6 +82,10 @@ class TestSale(BaseTestCase):
                     sale.total_amount,
                     Decimal(str(order_data.total_paid_tax_excl))
                 )
+                # Sale should not be created under alt_channel
+                self.assertEqual(len(self.Sale.search([
+                    ('channel', '=', self.alt_channel.id)
+                ])), 0)
 
                 # Creating the order again should blow up with a usererror
                 # due to sql constraints
@@ -89,11 +93,6 @@ class TestSale(BaseTestCase):
                     UserError,
                     self.Sale.create_using_ps_data, order_data
                 )
-
-                # Sale should not be created under alt_channel
-                self.assertEqual(len(self.Sale.search([
-                    ('channel', '=', self.alt_channel.id)
-                ])), 0)
 
     def test_0013_order_import_delivered(self):
         """Import an order that has been delivered on PS

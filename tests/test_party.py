@@ -23,11 +23,11 @@ class TestParty(BaseTestCase):
     def test_0010_party_import(self):
         """Test Party import
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT):
+        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
             # Call method to setup defaults
             self.setup_defaults()
 
-            with Transaction().set_context(
+            with txn.set_context(
                 current_channel=self.channel.id, ps_test=True
             ):
                 self.setup_channels()
@@ -64,6 +64,13 @@ class TestParty(BaseTestCase):
                 ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 1)
 
+                # Search for the same party in tryton using a different method
+                # It should return the same party
+                self.assertEqual(
+                    party.id,
+                    self.Party.get_party_using_ps_data(customer_data).id
+                )
+
                 # Create the same party, it should NOT create a new one
                 # Instead, it should blow up with a UserError sue to sql
                 # constraints
@@ -72,16 +79,16 @@ class TestParty(BaseTestCase):
                     self.Party.create_using_ps_data, customer_data
                 )
 
-                # Search for the same party in tryton using a different method
-                # It should return the same party
-                self.assertEqual(
-                    party.id,
-                    self.Party.get_party_using_ps_data(customer_data).id
-                )
+                txn.cursor.rollback()
 
-            with Transaction().set_context(
+        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
+            # Call method to setup defaults
+            self.setup_defaults()
+
+            with txn.set_context(
                 current_channel=self.alt_channel.id, ps_test=True
             ):
+                self.setup_channels()
                 self.alt_channel.get_prestashop_client()
 
                 # Nothing should be linked to alt_channel
@@ -95,6 +102,7 @@ class TestParty(BaseTestCase):
                 self.assertEqual(len(self.Party.search([
                     ('channel', '=', self.alt_channel.id)
                 ])), 1)
+                txn.cursor.rollback()
 
     def test_0020_address_import_n_matching(self):
         """Test address import and pattern matching

@@ -22,11 +22,11 @@ class TestProduct(BaseTestCase):
     def test_0010_product_template_import(self):
         """Test Product Template import
         """
-        with Transaction().start(DB_NAME, USER, context=CONTEXT):
+        with Transaction().start(DB_NAME, USER, context=CONTEXT) as txn:
             # Call method to setup defaults
             self.setup_defaults()
 
-            with Transaction().set_context(
+            with txn.set_context(
                 current_channel=self.channel.id, ps_test=True,
             ):
                 self.setup_channels()
@@ -56,32 +56,35 @@ class TestProduct(BaseTestCase):
                 ])), 1)
 
                 # Product name should be in english and french
-                with Transaction().set_context(language='en_US'):
+                with txn.set_context(language='en_US'):
                     template = self.ProductTemplate(template.id)
                     self.assertEqual(
                         template.name, 'iPod Nano'
                     )
-                with Transaction().set_context(language='fr_FR'):
+                with txn.set_context(language='fr_FR'):
                     template = self.ProductTemplate(template.id)
                     self.assertEqual(
                         template.name, 'iPod Nano French'
                     )
 
                 # Product description should be in english only
-                with Transaction().set_context(language='en_US'):
+                with txn.set_context(language='en_US'):
                     product_desc_en = self.Product(
-                        template.products[0].id).description
-                with Transaction().set_context(language='fr_FR'):
+                        template.products[0].id
+                    ).description
+                with txn.set_context(language='fr_FR'):
                     product_desc_fr = self.Product(
-                        template.products[0].id).description
+                        template.products[0].id
+                    ).description
                 self.assertEqual(product_desc_en, product_desc_fr)
 
-                # Try creating the same product again, it should NOT create a
-                # new one and blow with user error due to sql constraint
-                self.assertRaises(
-                    UserError,
-                    self.ProductTemplate.create_using_ps_data, product_data
-                )
+                # Nothing should be created under site_alt
+                self.assertEqual(len(self.TemplatePrestashop.search([
+                    ('channel', '=', self.alt_channel.id)
+                ])), 0)
+                self.assertEqual(len(self.ProductPrestashop.search([
+                    ('channel', '=', self.alt_channel.id)
+                ])), 0)
 
                 # Get template using prestashop data
                 self.assertEqual(
@@ -97,13 +100,12 @@ class TestProduct(BaseTestCase):
                     self.ProductTemplate.get_template_using_ps_id(1).id
                 )
 
-                # Nothing should be created under site_alt
-                self.assertEqual(len(self.TemplatePrestashop.search([
-                    ('channel', '=', self.alt_channel.id)
-                ])), 0)
-                self.assertEqual(len(self.ProductPrestashop.search([
-                    ('channel', '=', self.alt_channel.id)
-                ])), 0)
+                # Try creating the same product again, it should NOT create a
+                # new one and blow with user error due to sql constraint
+                self.assertRaises(
+                    UserError,
+                    self.ProductTemplate.create_using_ps_data, product_data
+                )
 
     def test_0020_product_import(self):
         """Test Product import

@@ -94,7 +94,7 @@ class Party:
         """
         party = cls.search([
             ('prestashop_id', '=', customer_record.id.pyval),
-            ('channel', '=', Transaction().context.get('current_channel'))
+            ('channel', '=', Transaction().context['current_channel'])
         ])
 
         return party and party[0] or None
