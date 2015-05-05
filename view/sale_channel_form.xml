@@ -6,7 +6,7 @@
                 <label name="prestashop_url" />
                 <field name="prestashop_url" />
                 <label name="prestashop_key" />
-                <field name="prestashop_key" />
+                <field name="prestashop_key" widget="password"/>
                 <label name="timezone" />
                 <field name="timezone" />
                 <newline/>
