@@ -1,0 +1,14 @@
+language: python
+python:
+  - "2.7"
+install: true
+script: make test-$TEST_CMD
+env:
+  - TEST_CMD="sqlite"
+  - TEST_CMD="postgres"
+  - TEST_CMD="flake8"
+after_success:
+  coveralls
+notifications:
+  email:
+    - ci-notify@openlabs.co.in

@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="template_view_form">
+            <field name="model">product.template</field>
+            <field name="inherit" ref="product.template_view_form"/>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <data>
+                    <xpath
+                        expr="/form/notebook" position="inside">
+                        <page string="Prestashop" col="4" id="prestashop">
+                            <field name="prestashop_ids" colspan="4"/>
+                        </page>
+                    </xpath>
+                </data>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="product_view_form">
+            <field name="model">product.product</field>
+            <field name="inherit" ref="product.product_view_form"/>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <data>
+                    <xpath
+                        expr="/form/notebook" position="inside">
+                        <page string="Prestashop" col="4" id="prestashop">
+                            <field name="prestashop_combination_ids" colspan="4"/>
+                        </page>
+                    </xpath>
+                </data>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="ps_template_view_form">
+            <field name="model">product.template.prestashop</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <form string="Prestashop ID">
+                    <label name="prestashop_id"/>
+                    <field name="prestashop_id"/>
+                    <label name="channel"/>
+                    <field name="channel"/>
+                    <label name="template"/>
+                    <field name="template"/>
+                </form>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="ps_template_view_tree">
+            <field name="model">product.template.prestashop</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <tree string="Prestashop IDs">
+                    <field name="prestashop_id"/>
+                    <field name="channel"/>
+                    <field name="template"/>
+                </tree>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="ps_product_view_form">
+            <field name="model">product.product.prestashop</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <form string="Prestashop ID">
+                    <label name="prestashop_combination_id"/>
+                    <field name="prestashop_combination_id"/>
+                    <label name="channel"/>
+                    <field name="channel"/>
+                    <label name="product"/>
+                    <field name="product"/>
+                </form>
+                ]]>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="ps_product_view_tree">
+            <field name="model">product.product.prestashop</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <![CDATA[
+                <tree string="Prestashop IDs">
+                    <field name="prestashop_combination_id"/>
+                    <field name="channel"/>
+                    <field name="product"/>
+                </tree>
+                ]]>
+            </field>
+        </record>
+    </data>
+</tryton>
+
