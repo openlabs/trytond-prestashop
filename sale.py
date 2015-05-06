@@ -341,6 +341,12 @@ class Sale:
         Sale.confirm([self])
 
         if order_state.order_state != 'sale.confirmed':
+            # XXX: To mark sale as Done, sale must be in Processing state
+            # as marking sale as Done is part of transition workflow now,
+            # which allows only processed sale to be marked as Done.
+            # But not sure if calling proceed before process is the right
+            # way to do.
+            Sale.proceed([self])
             Sale.process([self])
 
     @classmethod

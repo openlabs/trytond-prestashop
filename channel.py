@@ -197,8 +197,8 @@ class Channel:
 
             new_records = []
             for state in order_states:
-                # If this order state already exists for this channel, skip and do
-                # not create it again
+                # If this order state already exists for this channel, skip and
+                # do not create it again
                 if SiteOrderState.search_using_ps_id(state.id.pyval):
                     continue
 
