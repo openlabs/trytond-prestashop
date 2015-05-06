@@ -28,20 +28,20 @@ class TestSale(BaseTestCase):
 
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
-                prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.channel.id, ps_test=True,
             ):
-                self.setup_sites()
+                self.setup_channels()
 
-                self.site.get_prestashop_client()
+                self.channel.get_prestashop_client()
 
                 self.assertEqual(len(self.Sale.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.Address.search([
-                    ('party.prestashop_site', '=', self.site.id)
+                    ('party.channel', '=', self.channel.id)
                 ])), 0)
                 self.assertEqual(len(self.ContactMechanism.search([])), 0)
 
@@ -49,13 +49,13 @@ class TestSale(BaseTestCase):
 
                 self.Sale.find_or_create_using_ps_data(order_data)
                 self.assertEqual(len(self.Sale.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.Party.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.Address.search([
-                    ('party.prestashop_site', '=', self.site.id)
+                    ('party.channel', '=', self.channel.id)
                 ])), 1)
                 self.assertEqual(len(self.ContactMechanism.search([])), 3)
 
@@ -63,11 +63,11 @@ class TestSale(BaseTestCase):
                 # new one.
                 self.Sale.find_or_create_using_ps_data(order_data)
                 self.assertEqual(len(self.Sale.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
 
                 sale, = self.Sale.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])
 
                 # Test getting sale using prestashop data
@@ -82,6 +82,10 @@ class TestSale(BaseTestCase):
                     sale.total_amount,
                     Decimal(str(order_data.total_paid_tax_excl))
                 )
+                # Sale should not be created under alt_channel
+                self.assertEqual(len(self.Sale.search([
+                    ('channel', '=', self.alt_channel.id)
+                ])), 0)
 
                 # Creating the order again should blow up with a usererror
                 # due to sql constraints
@@ -89,11 +93,6 @@ class TestSale(BaseTestCase):
                     UserError,
                     self.Sale.create_using_ps_data, order_data
                 )
-
-                # Sale should not be created under site_alt
-                self.assertEqual(len(self.Sale.search([
-                    ('prestashop_site', '=', self.site_alt.id)
-                ])), 0)
 
     def test_0013_order_import_delivered(self):
         """Import an order that has been delivered on PS
@@ -104,9 +103,9 @@ class TestSale(BaseTestCase):
 
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
-                prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.channel.id, ps_test=True,
             ):
-                self.setup_sites()
+                self.setup_channels()
 
                 order_data = get_objectified_xml('orders', 1)
 
@@ -123,9 +122,9 @@ class TestSale(BaseTestCase):
 
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
-                prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.channel.id, ps_test=True,
             ):
-                self.setup_sites()
+                self.setup_channels()
 
                 order_data = get_objectified_xml('orders', 2)
 
@@ -133,8 +132,8 @@ class TestSale(BaseTestCase):
 
                 self.assertEqual(sale.state, 'cancel')
 
-    def test_0020_order_import_from_site(self):
-        """Test Order import from site
+    def test_0020_order_import_from_prestashop(self):
+        """Test Order import from prestashop
         """
         with Transaction().start(DB_NAME, USER, context=CONTEXT):
             # Call method to setup defaults
@@ -142,18 +141,18 @@ class TestSale(BaseTestCase):
 
             with Transaction().set_context(
                 self.User.get_preferences(context_only=True),
-                prestashop_site=self.site.id, ps_test=True,
+                current_channel=self.channel.id, ps_test=True,
             ):
-                self.setup_sites()
+                self.setup_channels()
 
                 self.assertEqual(len(self.Sale.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 0)
 
-                self.site.import_orders_from_prestashop_site()
+                self.channel.import_prestashop_orders()
 
                 self.assertEqual(len(self.Sale.search([
-                    ('prestashop_site', '=', self.site.id)
+                    ('channel', '=', self.channel.id)
                 ])), 1)
 
 

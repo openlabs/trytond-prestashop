@@ -2,7 +2,7 @@
 """
     prestashop
 
-    :copyright: (c) 2013 by Openlabs Technologies & Consulting (P) Limited
+    :copyright: (c) 2015 by Openlabs Technologies & Consulting (P) Limited
     :license: GPLv3, see LICENSE for more details.
 """
 from datetime import datetime
@@ -11,61 +11,47 @@ import pytz
 import requests
 import pystashop
 from mockstashop import MockstaShopWebservice
-from trytond.model import ModelSQL, ModelView, fields
-from trytond.pyson import Eval
+from trytond.model import ModelView, fields
 from trytond.transaction import Transaction
-from trytond.pool import Pool
+from trytond.pool import Pool, PoolMeta
 from trytond.wizard import Wizard, StateView, Button
 
-
+__metaclass__ = PoolMeta
 __all__ = [
-    'Site', 'ImportWizardView', 'ImportWizard',
-    'ExportWizardView', 'ExportWizard',
-    'ConnectionWizardView', 'ConnectionWizard',
+    'Channel', 'PrestashopImportOrdersWizardView',
+    'PrestashopImportOrdersWizard', 'PrestashopExportOrdersWizardView',
+    'PrestashopExportOrdersWizard',
+    'PrestashopConnectionWizardView', 'PrestashopConnectionWizard',
 ]
 TIMEZONES = [(x, x) for x in pytz.common_timezones]
 
 
-class Site(ModelSQL, ModelView):
-    "Prestashop Site"
-    __name__ = 'prestashop.site'
-    _rec_name = 'url'
+class Channel:
+    """
+    Sale Channel model
+    """
+    __name__ = 'sale.channel'
 
     #: The URL of prestashop site
-    url = fields.Char('URL', required=True)
+    prestashop_url = fields.Char('Prestashop URL', required=True)
 
     #: The webservices key for access to site
-    key = fields.Char('Key', required=True)
-
-    #: Company to which this site is linked
-    company = fields.Many2One('company.company', 'Company', required=True)
+    prestashop_key = fields.Char('Prestashop Key', required=True)
 
     #: Last time at which the orders were imported from prestashop
-    last_order_import_time = fields.DateTime('Last order import time')
+    last_prestashop_order_import_time = fields.DateTime(
+        'Last Prestashop Order Import Time'
+    )
 
     #: Last time at which the orders were exported to prestashop
-    last_order_export_time = fields.DateTime('Last order export time')
-
-    #: Used to set expense account while creating products.
-    default_account_expense = fields.Property(fields.Many2One(
-        'account.account', 'Account Expense', domain=[
-            ('kind', '=', 'expense'),
-            ('company', '=', Eval('context', {}).get('company', 0)),
-        ], required=True
-    ))
-
-    #: Used to set revenue account while creating products.
-    default_account_revenue = fields.Property(fields.Many2One(
-        'account.account', 'Account Revenue', domain=[
-            ('kind', '=', 'revenue'),
-            ('company', '=', Eval('context', {}).get('company', 0)),
-        ], required=True
-    ))
-
-    #: Imported Sale Orders are created in this warehouse.
-    default_warehouse = fields.Many2One(
-        'stock.location', 'Warehouse', domain=[('type', '=', 'warehouse')],
-        required=True
+    last_prestashop_order_export_time = fields.DateTime(
+        'Last Prestashop order export time'
+    )
+    shipping_product = fields.Many2One(
+        'product.product', 'Shipping Product', required=True, domain=[
+            ('type', '=', 'service'),
+            ('template.type', '=', 'service'),
+        ]
     )
 
     #: The timezone set on prestashop site
@@ -79,12 +65,12 @@ class Site(ModelSQL, ModelView):
 
     #: Allowed languages to be synced for the site
     languages = fields.One2Many(
-        'prestashop.site.lang', 'site', 'Languages'
+        'prestashop.site.lang', 'channel', 'Languages'
     )
 
     #: The mapping between prestashop order states and tryton sale states
     order_states = fields.One2Many(
-        'prestashop.site.order_state', 'site', 'Order States'
+        'prestashop.site.order_state', 'channel', 'Order States'
     )
 
     #: Set this to True to handle invoicing in tryton and get invoice info
@@ -94,26 +80,44 @@ class Site(ModelSQL, ModelView):
     handle_invoice = fields.Boolean('Handle Invoicing ?')
 
     @classmethod
+    def get_source(cls):
+        """
+        Get the source
+        """
+        res = super(Channel, cls).get_source()
+        res.append(('prestashop', 'Prestashop'))
+        return res
+
+    def validate_prestashop_channel(self):
+        """
+        Check if current channel belongs to prestashop
+        """
+        if self.source != 'prestashop':
+            self.raise_user_error("invalid_prestashop_channel")
+
+    @classmethod
     def __setup__(cls):
-        super(Site, cls).__setup__()
+        super(Channel, cls).__setup__()
         cls._error_messages.update({
             'prestashop_settings_missing':
-            'Prestashop webservice settings are incomplete.',
-            'multiple_sites':
-            'Test connection can be done for only one site at a time.',
+                'Prestashop webservice settings are incomplete.',
+            'invalid_prestashop_channel':
+                'Current channel does not belongs to prestashop',
+            'multiple_channels':
+                'Test connection can be done for only one channel at a time.',
             'wrong_url_n_key': 'Connection Failed! Please check URL and Key',
             'wrong_url': 'Connection Failed! The URL provided is wrong',
             'languages_not_imported':
-            'Import the languages before importing order states',
-            'order_states_not_imported': 'Import the order states before '
-            'importing/exporting orders'
+                'Import the languages before importing order states',
+            'order_states_not_imported':
+                'Import the order states before importing/exporting orders'
         })
         cls._buttons.update({
-            'test_connection': {},
-            'import_languages': {},
-            'import_order_states': {},
-            'import_orders': {},
-            'export_orders': {},
+            'test_prestashop_connection': {},
+            'import_prestashop_languages': {},
+            'import_prestashop_order_states': {},
+            'import_prestashop_orders': {},
+            'export_prestashop_orders': {},
         })
 
     def get_prestashop_client(self):
@@ -122,7 +126,7 @@ class Site(ModelSQL, ModelView):
 
         :return: Prestashop client object
         """
-        if not all([self.url, self.key]):
+        if not all([self.prestashop_url, self.prestashop_key]):
             self.raise_user_error('prestashop_settings_missing')
 
         if Transaction().context.get('ps_test'):
@@ -132,7 +136,7 @@ class Site(ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    def import_languages(cls, sites):
+    def import_prestashop_languages(cls, channels):
         """Import Languages from remote and try to link them to tryton
         languages
 
@@ -141,14 +145,16 @@ class Site(ModelSQL, ModelView):
         """
         SiteLanguage = Pool().get('prestashop.site.lang')
 
-        if len(sites) != 1:
-            cls.raise_user_error('multiple_sites')
-        site = sites[0]
+        if len(channels) != 1:
+            cls.raise_user_error('multiple_channels')
+        channel = channels[0]
+
+        channel.validate_prestashop_channel()
 
         # Set this site in context
-        with Transaction().set_context(prestashop_site=site.id):
+        with Transaction().set_context(current_channel=channel.id):
 
-            client = site.get_prestashop_client()
+            client = channel.get_prestashop_client()
             languages = client.languages.get_list(display='full')
 
             new_records = []
@@ -165,7 +171,7 @@ class Site(ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    def import_order_states(cls, sites):
+    def import_prestashop_order_states(cls, channels):
         """Import Order States from remote and try to link them to tryton
         order states
 
@@ -173,24 +179,26 @@ class Site(ModelSQL, ModelView):
         """
         SiteOrderState = Pool().get('prestashop.site.order_state')
 
-        if len(sites) != 1:
-            cls.raise_user_error('multiple_sites')
-        site = sites[0]
+        if len(channels) != 1:
+            cls.raise_user_error('multiple_channels')
+        channel = channels[0]
 
-        # Set this site to context
-        with Transaction().set_context(prestashop_site=site.id):
+        channel.validate_prestashop_channel()
 
-            # If site languages don't exist, then raise an error
-            if not site.languages:
+        # Set this channel to context
+        with Transaction().set_context(current_channel=channel.id):
+
+            # If channel languages don't exist, then raise an error
+            if not channel.languages:
                 cls.raise_user_error('languages_not_imported')
 
-            client = site.get_prestashop_client()
+            client = channel.get_prestashop_client()
             order_states = client.order_states.get_list(display='full')
 
             new_records = []
             for state in order_states:
-                # If this order state already exists for this site, skip and do
-                # not create it again
+                # If this order state already exists for this channel, skip and
+                # do not create it again
                 if SiteOrderState.search_using_ps_id(state.id.pyval):
                     continue
 
@@ -202,14 +210,16 @@ class Site(ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button_action('prestashop.wizard_prestashop_connection')
-    def test_connection(cls, sites):
+    def test_prestashop_connection(cls, channels):
         """Test Prestashop connection and display appropriate message to user
         """
-        if len(sites) != 1:
-            cls.raise_user_error('multiple_sites')
-        site = sites[0]
+        if len(channels) != 1:
+            cls.raise_user_error('multiple_channels')
+        channel = channels[0]
+
+        channel.validate_prestashop_channel()
         try:
-            client = site.get_prestashop_client()
+            client = channel.get_prestashop_client()
 
             # Try getting the list of shops
             # If it fails with prestashop error, then raise error
@@ -223,7 +233,7 @@ class Site(ModelSQL, ModelView):
             cls.raise_user_error('wrong_url')
 
     @classmethod
-    def import_orders_from_prestashop(cls, sites=None):
+    def import_prestashop_orders_using_cron(cls, channels):
         """Import orders from prestashop
 
         :param sites: The list of sites from which the orders are to be
@@ -231,18 +241,15 @@ class Site(ModelSQL, ModelView):
 
         ..note:: This method is usually called by the cron
         """
-        # TODO: In future it should be possible to call each site separately.
-        if not sites:
-            sites = cls.search([
-                ('company', '=', Transaction().context.get('company'))
-            ])
-
-        for site in sites:
-            site.import_orders_from_prestashop_site()
+        channels = cls.search([
+            ('source', '=', 'prestashop')
+        ])
+        for channel in channels:
+            channel.import_prestashop_orders()
 
     @classmethod
-    @ModelView.button_action('prestashop.wizard_prestashop_import')
-    def import_orders(cls, sites=None):
+    @ModelView.button_action('prestashop.wizard_prestashop_import_orders')
+    def import_prestashop_orders_button(cls, sites=None):
         """Dummy button to fire up the wizard for import of orders
 
         :param sites: The list of sites from which the orders are to be
@@ -250,7 +257,7 @@ class Site(ModelSQL, ModelView):
         """
         pass
 
-    def import_orders_from_prestashop_site(self):
+    def import_prestashop_orders(self):
         """Import orders for the current site from prestashop
         Import only those orers which are updated after the
         `last order import time` as set in the prestashop configuration
@@ -258,7 +265,7 @@ class Site(ModelSQL, ModelView):
         :returns: The list of active records of sales imported
         """
         Sale = Pool().get('sale.sale')
-        Site = Pool().get('prestashop.site')
+        self.validate_prestashop_channel()
 
         if not self.order_states:
             self.raise_user_error('order_states_not_imported')
@@ -269,17 +276,17 @@ class Site(ModelSQL, ModelView):
         time_now = site_tz.normalize(pytz.utc.localize(utc_time_now))
         client = self.get_prestashop_client()
 
-        with Transaction().set_context(prestashop_site=self.id):
-            if self.last_order_import_time:
+        with Transaction().set_context(current_channel=self.id):
+            if self.last_prestashop_order_import_time:
                 # In tryton all time stored is in UTC
                 # Convert the last import time to timezone of the site
-                last_order_import_time = site_tz.normalize(
-                    pytz.utc.localize(self.last_order_import_time)
+                last_prestashop_order_import_time = site_tz.normalize(
+                    pytz.utc.localize(self.last_prestashop_order_import_time)
                 )
                 orders_to_import = client.orders.get_list(
                     filters={
                         'date_upd': '{0},{1}'.format(
-                            last_order_import_time.strftime(
+                            last_prestashop_order_import_time.strftime(
                                 '%Y-%m-%d %H:%M:%S'
                             ),
                             time_now.strftime('%Y-%m-%d %H:%M:%S')
@@ -290,8 +297,8 @@ class Site(ModelSQL, ModelView):
                 # FIXME: This wont scale if there are thousands of orders
                 orders_to_import = client.orders.get_list(display='full')
 
-            Site.write([self], {
-                'last_order_import_time': utc_time_now
+            self.write([self], {
+                'last_prestashop_order_import_time': utc_time_now
             })
             sales_imported = []
             for order in orders_to_import:
@@ -300,41 +307,33 @@ class Site(ModelSQL, ModelView):
         return sales_imported
 
     @classmethod
-    def export_orders_to_prestashop(cls, sites=None):
-        """Export order status to prestashop
-
-        :param sites: The list of sites to which the orders are to be
-                      exported
-
-        ..note:: This method is usually called by the cron
+    def export_orders_to_prestashop_using_cron(cls):
         """
-        if not sites:
-            sites = cls.search([
-                ('company', '=', Transaction().context.get('company'))
-            ])
-
-        for site in sites:
-            site.export_orders_to_prestashop_for_site()
+        Export order status to prestashop using cron
+        """
+        channels = cls.search([
+            ('source', '=', 'prestashop')
+        ])
+        for channel in channels:
+            channel.export_orders_to_prestashop()
 
     @classmethod
-    @ModelView.button_action('prestashop.wizard_prestashop_export')
-    def export_orders(cls, sites=None):
-        """Dummy button to fire up the wizard for export of orders
-
-        :param sites: The list of sites to which the orders are to be
-                      exported
+    @ModelView.button_action('prestashop.wizard_prestashop_export_orders')
+    def export_orders_button(cls, channels):
+        """
+        Dummy button to fire up the wizard for export of orders
         """
         pass
 
-    def export_orders_to_prestashop_site(self):
-        """Export order status to prestashop current site
+    def export_orders_to_prestashop(self):
+        """
+        Export order status to prestashop current site
         Export only those orders which are modified after the
         `last order export time` as set in the prestashop configuration.
 
         :returns: The list of active records of sales exported
         """
         Sale = Pool().get('sale.sale')
-        Site = Pool().get('prestashop.site')
         Move = Pool().get('stock.move')
 
         if not self.order_states:
@@ -342,30 +341,33 @@ class Site(ModelSQL, ModelView):
 
         time_now = datetime.utcnow()
 
-        with Transaction().set_context(prestashop_site=self.id):
-            if self.last_order_export_time:
+        self.validate_prestashop_channel()
+
+        with Transaction().set_context(current_channel=self.id):
+            if self.last_prestashop_order_export_time:
                 # Sale might not get updated for state changes in the related
                 # shipments.
                 # So first get the moves for outgoing shipments which are \
                 # executed after last import time.
                 moves = Move.search([
-                    ('write_date', '>=', self.last_order_export_time),
-                    ('sale.prestashop_site', '=', self.id),
+                    (
+                        'write_date', '>=',
+                        self.last_prestashop_order_export_time
+                    ),
+                    ('sale.channel', '=', self.id),
                     ('shipment', 'like', 'stock.shipment.out%')
                 ])
                 sales_to_export = Sale.search(['OR', [
                     ('write_date', '>=', self.last_order_export_time),
-                    ('prestashop_site', '=', self.id),
+                    ('channel', '=', self.id),
                 ], [
                     ('id', 'in', map(int, [m.sale for m in moves]))
                 ]])
             else:
-                sales_to_export = Sale.search([
-                    ('prestashop_site', '=', self.id),
-                ])
+                sales_to_export = Sale.search([('channel', '=', self.id)])
 
-            Site.write([self], {
-                'last_order_export_time': time_now
+            self.write([self], {
+                'last_prestashop_order_export_time': time_now
             })
 
             for sale in sales_to_export:
@@ -374,12 +376,12 @@ class Site(ModelSQL, ModelView):
         return sales_to_export
 
 
-class ConnectionWizardView(ModelView):
+class PrestashopConnectionWizardView(ModelView):
     'Prestashop Connection Wizard View'
     __name__ = 'prestashop.connection.wizard.view'
 
 
-class ConnectionWizard(Wizard):
+class PrestashopConnectionWizard(Wizard):
     'Prestashop Connection Wizard'
     __name__ = 'prestashop.connection.wizard'
 
@@ -399,73 +401,75 @@ class ConnectionWizard(Wizard):
         return {}
 
 
-class ImportWizardView(ModelView):
+class PrestashopImportOrdersWizardView(ModelView):
     'Prestashop Import Wizard View'
-    __name__ = 'prestashop.import.wizard.view'
+    __name__ = 'prestashop.import_orders.wizard.view'
 
     orders_imported = fields.Integer('Orders Imported', readonly=True)
 
 
-class ImportWizard(Wizard):
+class PrestashopImportOrdersWizard(Wizard):
     'Prestashop Import Wizard'
-    __name__ = 'prestashop.import.wizard'
+    __name__ = 'prestashop.import_orders.wizard'
 
     start = StateView(
-        'prestashop.import.wizard.view',
-        'prestashop.prestashop_import_wizard_view_form',
+        'prestashop.import_orders.wizard.view',
+        'prestashop.prestashop_import_orders_wizard_view_form',
         [
             Button('Ok', 'end', 'tryton-ok'),
         ]
     )
 
     def default_start(self, fields):
-        """Import the orders and display a confirmation message to the user
+        """
+        Import the orders and display a confirmation message to the user
 
         :param fields: Wizard fields
         """
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = Site(Transaction().context['active_id'])
+        channel = SaleChannel(Transaction().context['active_id'])
 
-        default = {
-            'orders_imported': len(
-                site.import_orders_from_prestashop_site()
-            )}
+        channel.validate_prestashop_channel()
 
-        return default
+        return {
+            'orders_imported': len(channel.import_prestashop_orders())
+        }
 
 
-class ExportWizardView(ModelView):
-    'Prestashop Export Wizard View'
-    __name__ = 'prestashop.export.wizard.view'
+class PrestashopExportOrdersWizardView(ModelView):
+    'Prestashop Export Orders Wizard View'
+    __name__ = 'prestashop.export_orders.wizard.view'
 
     orders_exported = fields.Integer('Orders Exported', readonly=True)
 
 
-class ExportWizard(Wizard):
-    'Prestashop Export Wizard'
-    __name__ = 'prestashop.export.wizard'
+class PrestashopExportOrdersWizard(Wizard):
+    'Prestashop Export Orders Wizard'
+    __name__ = 'prestashop.export_orders.wizard'
 
     start = StateView(
-        'prestashop.export.wizard.view',
-        'prestashop.prestashop_export_wizard_view_form',
+        'prestashop.export_orders.wizard.view',
+        'prestashop.prestashop_export_orders_wizard_view_form',
         [
             Button('Ok', 'end', 'tryton-ok'),
         ]
     )
 
     def default_start(self, fields):
-        """Export the orders and display a confirmation message to the user
+        """
+        Export the orders and display a confirmation message to the user
 
         :param fields: Wizard fields
         """
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = Site(Transaction().context['active_id'])
+        channel = SaleChannel(Transaction().context['active_id'])
+
+        channel.validate_prestashop_channel()
 
         default = {
-            'orders_exported': len(
-                site.export_orders_to_prestashop_site()
-            )}
+            'orders_exported': len(channel.export_orders_to_prestashop())
+        }
 
         return default

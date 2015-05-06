@@ -20,7 +20,7 @@ class CountryPrestashop(ModelSQL):
     """Prestashop country cache
 
     This model keeps a store of tryton country corresponding to the country
-    on prestashop as per prestashop site.
+    on prestashop as per prestashop channel.
     This model is used to prevent extra API calls to be sent to prestashop
     to get the country.
     Everytime a country has to be looked up, it is first looked up in this
@@ -29,21 +29,21 @@ class CountryPrestashop(ModelSQL):
     __name__ = 'country.country.prestashop'
 
     country = fields.Many2One('country.country', 'Country', required=True)
-    site = fields.Many2One('prestashop.site', 'Site', required=True)
+    channel = fields.Many2One('sale.channel', 'Channel', required=True)
     prestashop_id = fields.Integer('Prestashop ID', required=True)
 
     @staticmethod
-    def default_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+    def default_channel():
+        "Return default channel from context"
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def __setup__(cls):
         super(CountryPrestashop, cls).__setup__()
         cls._sql_constraints += [
             (
-                'prestashop_id_site_uniq', 'UNIQUE(prestashop_id, site)',
-                'Country must be unique by prestashop id and site'
+                'prestashop_id_channel_uniq', 'UNIQUE(prestashop_id, channel)',
+                'Country must be unique by prestashop id and channel'
             )
         ]
 
@@ -52,7 +52,7 @@ class SubdivisionPrestashop(ModelSQL):
     """Prestashop subdivision cache
 
     This model keeps a store of tryton subdivision corresponding to the state
-    on prestashop as per prestashop site.
+    on prestashop as per prestashop channel.
     This model is used to prevent extra API calls to be sent to prestashop
     to get the subdivision.
     Everytime a subdivision has to be looked up, it is first looked up in this
@@ -63,21 +63,21 @@ class SubdivisionPrestashop(ModelSQL):
     subdivision = fields.Many2One(
         'country.subdivision', 'Subdivision', required=True
     )
-    site = fields.Many2One('prestashop.site', 'Site', required=True)
+    channel = fields.Many2One('sale.channel', 'Channel', required=True)
     prestashop_id = fields.Integer('Prestashop ID', required=True)
 
     @staticmethod
-    def default_site():
-        "Return default site from context"
-        return Transaction().context.get('prestashop_site')
+    def default_channel():
+        "Return default channel from context"
+        return Transaction().context.get('current_channel')
 
     @classmethod
     def __setup__(cls):
         super(SubdivisionPrestashop, cls).__setup__()
         cls._sql_constraints += [
             (
-                'prestashop_id_site_uniq', 'UNIQUE(prestashop_id, site)',
-                'Subdivision must be unique by prestashop id and site'
+                'prestashop_id_channel_uniq', 'UNIQUE(prestashop_id, channel)',
+                'Subdivision must be unique by prestashop id and channel'
             )
         ]
 
@@ -96,7 +96,7 @@ class Country:
     @classmethod
     def get_using_ps_id(cls, prestashop_id):
         """Return the country corresponding to the prestashop_id for the
-        current site in context
+        current channel in context
         If the country is not found in the cache model, it is fetched from
         remote and a record is created in the cache for future references.
 
@@ -106,7 +106,7 @@ class Country:
         CountryPrestashop = Pool().get('country.country.prestashop')
 
         records = CountryPrestashop.search([
-            ('site', '=', Transaction().context.get('prestashop_site')),
+            ('channel', '=', Transaction().context.get('current_channel')),
             ('prestashop_id', '=', prestashop_id)
         ])
 
@@ -124,10 +124,12 @@ class Country:
         :returns: Active record of the country cached
         """
         CountryPrestashop = Pool().get('country.country.prestashop')
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = Site(Transaction().context.get('prestashop_site'))
-        client = site.get_prestashop_client()
+        channel = SaleChannel(Transaction().context['current_channel'])
+        channel.validate_prestashop_channel()
+
+        client = channel.get_prestashop_client()
 
         country_data = client.countries.get(prestashop_id)
         country = cls.search([('code', '=', country_data.iso_code.pyval)])
@@ -138,7 +140,7 @@ class Country:
             )
         CountryPrestashop.create([{
             'country': country[0].id,
-            'site': site.id,
+            'channel': channel.id,
             'prestashop_id': prestashop_id,
         }])
 
@@ -159,7 +161,7 @@ class Subdivision:
     @classmethod
     def get_using_ps_id(cls, prestashop_id):
         """Return the subdivision corresponding to the prestashop_id for the
-        current site in context.
+        current channel in context.
         If the subdivision is not found in the cache model, it is fetched from
         remote and a record is created in the cache for future references.
 
@@ -169,7 +171,7 @@ class Subdivision:
         SubdivisionPrestashop = Pool().get('country.subdivision.prestashop')
 
         records = SubdivisionPrestashop.search([
-            ('site', '=', Transaction().context.get('prestashop_site')),
+            ('channel', '=', Transaction().context.get('current_channel')),
             ('prestashop_id', '=', prestashop_id)
         ])
 
@@ -188,10 +190,12 @@ class Subdivision:
         """
         SubdivisionPrestashop = Pool().get('country.subdivision.prestashop')
         Country = Pool().get('country.country')
-        Site = Pool().get('prestashop.site')
+        SaleChannel = Pool().get('sale.channel')
 
-        site = Site(Transaction().context.get('prestashop_site'))
-        client = site.get_prestashop_client()
+        channel = SaleChannel(Transaction().context['current_channel'])
+        channel.validate_prestashop_channel()
+
+        client = channel.get_prestashop_client()
 
         state_data = client.states.get(prestashop_id)
         # The country should have been cached till now for sure
@@ -209,7 +213,7 @@ class Subdivision:
 
         SubdivisionPrestashop.create([{
             'subdivision': subdivision[0].id,
-            'site': site.id,
+            'channel': channel.id,
             'prestashop_id': prestashop_id,
         }])
 
