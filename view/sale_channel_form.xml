@@ -1,36 +1,37 @@
 <?xml version="1.0"?>
 <data>
     <xpath expr="//notebook" position="inside">
-          <page id="prestashop_details" string="Prestashop"
-                    states="{'invisible': Not(Eval('source') == 'prestashop')}">
-                <label name="prestashop_url" />
-                <field name="prestashop_url" />
-                <label name="prestashop_key" />
-                <field name="prestashop_key" />
-                <label name="timezone" />
-                <field name="timezone" />
-                <newline/>
-                <separator id="last_import_export_time" string="Import / Export Time" colspan="2"/>
-                <newline/>
-                <label name="last_prestashop_order_import_time"/>
-                <field name="last_prestashop_order_import_time"/>
-                <label name="last_prestashop_order_import_time"/>
-                <field name="last_prestashop_order_import_time"/>
-                <newline/>
-                <group id="prestashop_buttons" col="4" colspan="4"
-                        states="{'invisible': Not(Eval('source') == 'prestashop')}">
-                    <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
-                    <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
-                    <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>
-                    <button name="import_prestashop_orders" string="Import Prestashop Orders"/>
-                    <button name="export_prestashop_orders" string="Export Prestashop Orders"/>
-                </group>
-          </page>
-          <page string="Prestahsop Languages" id="languages">
-                <field name="languages" mode="tree,form" colspan="4"/>
-          </page>
-          <page string="Prestahsop Order States" id="order_states">
-                <field name="order_states" mode="tree,form" colspan="4"/>
-          </page>
+        <page id="prestashop_details" string="Prestashop" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+              <label name="prestashop_url" />
+              <field name="prestashop_url" />
+              <label name="prestashop_key" />
+              <field name="prestashop_key" />
+              <label name="timezone" />
+              <field name="timezone" />
+              <newline/>
+              <notebook>
+                  <page string="Prestahsop Languages" id="languages">
+                      <field name="languages" mode="tree,form" colspan="4"/>
+                  </page>
+                  <page string="Prestahsop Order States" id="order_states">
+                      <field name="order_states" mode="tree,form" colspan="4"/>
+                  </page>
+                  <page string="Import / Export Time" id="last_import_export_time">
+                      <label name="last_prestashop_order_import_time"/>
+                      <field name="last_prestashop_order_import_time"/>
+                      <label name="last_prestashop_order_import_time"/>
+                      <field name="last_prestashop_order_import_time"/>
+                  </page>
+              </notebook>
+              <group id="prestashop_buttons" col="4" colspan="4"
+                      states="{'invisible': Not(Eval('source') == 'prestashop')}">
+                  <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
+                  <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
+                  <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>
+                  <button name="import_prestashop_orders" string="Import Prestashop Orders"/>
+                  <button name="export_prestashop_orders" string="Export Prestashop Orders"/>
+              </group>
+        </page>
+        
     </xpath>
 </data>

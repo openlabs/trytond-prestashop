@@ -15,6 +15,7 @@ from trytond.model import ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
 from trytond.wizard import Wizard, StateView, Button
+from trytond.pyson import Eval
 
 __metaclass__ = PoolMeta
 __all__ = [
@@ -25,6 +26,14 @@ __all__ = [
 ]
 TIMEZONES = [(x, x) for x in pytz.common_timezones]
 
+PRESTASHOP_STATES = {
+    'required': Eval('source') == 'prestashop',
+    'invisible': ~(Eval('source') == 'prestashop')
+}
+INVISIBLE_IF_NOT_PRESTASHOP = {
+    'invisible': ~(Eval('source') == 'prestashop')
+}
+
 
 class Channel:
     """
@@ -33,25 +42,32 @@ class Channel:
     __name__ = 'sale.channel'
 
     #: The URL of prestashop site
-    prestashop_url = fields.Char('Prestashop URL', required=True)
+    prestashop_url = fields.Char(
+        'Prestashop URL', states=PRESTASHOP_STATES, depends=['source']
+    )
 
     #: The webservices key for access to site
-    prestashop_key = fields.Char('Prestashop Key', required=True)
+    prestashop_key = fields.Char(
+        'Prestashop Key', states=PRESTASHOP_STATES, depends=['source']
+    )
 
     #: Last time at which the orders were imported from prestashop
     last_prestashop_order_import_time = fields.DateTime(
-        'Last Prestashop Order Import Time'
+        'Last Prestashop Order Import Time', states=INVISIBLE_IF_NOT_PRESTASHOP,
+        depends=['source']
     )
 
     #: Last time at which the orders were exported to prestashop
     last_prestashop_order_export_time = fields.DateTime(
-        'Last Prestashop order export time'
+        'Last Prestashop order export time', states=INVISIBLE_IF_NOT_PRESTASHOP,
+        depends=['source']
     )
     shipping_product = fields.Many2One(
-        'product.product', 'Shipping Product', required=True, domain=[
+        'product.product', 'Shipping Product', states=PRESTASHOP_STATES,
+        domain=[
             ('type', '=', 'service'),
             ('template.type', '=', 'service'),
-        ]
+        ], depends=['source']
     )
 
     #: The timezone set on prestashop site
@@ -60,24 +76,30 @@ class Channel:
     #: Also in order to determine what orders are to be imported, we need
     #: to convert UTC to this timezone to ensure correct time interval
     timezone = fields.Selection(
-        TIMEZONES, 'Timezone', translate=False, required=True
+        TIMEZONES, 'Timezone', translate=False, states=PRESTASHOP_STATES,
+        depends=['source']
     )
 
     #: Allowed languages to be synced for the site
     languages = fields.One2Many(
-        'prestashop.site.lang', 'channel', 'Languages'
+        'prestashop.site.lang', 'channel', 'Languages',
+        states=INVISIBLE_IF_NOT_PRESTASHOP, depends=['source']
     )
 
     #: The mapping between prestashop order states and tryton sale states
     order_states = fields.One2Many(
-        'prestashop.site.order_state', 'channel', 'Order States'
+        'prestashop.site.order_state', 'channel', 'Order States',
+        states=INVISIBLE_IF_NOT_PRESTASHOP, depends=['source']
     )
 
     #: Set this to True to handle invoicing in tryton and get invoice info
     #: TODO: A provision to be implemented in future versions
     #: Also handle multiple payment methods where each will have different
     #: journal and account setups
-    handle_invoice = fields.Boolean('Handle Invoicing ?')
+    handle_invoice = fields.Boolean(
+        'Handle Invoicing ?', states=INVISIBLE_IF_NOT_PRESTASHOP,
+        depends=['source']
+    )
 
     @classmethod
     def get_source(cls):
