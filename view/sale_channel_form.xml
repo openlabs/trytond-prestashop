@@ -6,17 +6,23 @@
               <field name="prestashop_url" />
               <label name="prestashop_key" />
               <field name="prestashop_key" />
-              <label name="timezone" />
-              <field name="timezone" />
               <newline/>
               <notebook>
-                  <page string="Prestahsop Languages" id="languages">
-                      <field name="languages" mode="tree,form" colspan="4"/>
+                  <page string="General" id="general">
+                      <label name="prestashop_timezone" />
+                      <field name="prestashop_timezone" />
+                      <label name="prestashop_shipping_product" />
+                      <field name="prestashop_shipping_product" />
+                      <label name="prestashop_handle_invoice" />
+                      <field name="prestashop_handle_invoice" />
                   </page>
-                  <page string="Prestahsop Order States" id="order_states">
-                      <field name="order_states" mode="tree,form" colspan="4"/>
+                  <page string="Prestahsop Languages" id="prestashop_languages">
+                      <field name="prestashop_languages" mode="tree,form" colspan="4"/>
                   </page>
-                  <page string="Import / Export Time" id="last_import_export_time">
+                  <page string="Prestahsop Order States" id="prestashop_order_states">
+                      <field name="prestashop_order_states" mode="tree,form" colspan="4"/>
+                  </page>
+                  <page string="Import / Export Time" id="prestashop_last_import_export_time">
                       <label name="last_prestashop_order_import_time"/>
                       <field name="last_prestashop_order_import_time"/>
                       <label name="last_prestashop_order_import_time"/>

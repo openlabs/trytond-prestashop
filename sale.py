@@ -264,7 +264,7 @@ class Sale:
         sale_time = datetime.strptime(
             order_record.date_add.pyval, '%Y-%m-%d %H:%M:%S'
         )
-        channel_tz = pytz.timezone(channel.timezone)
+        channel_tz = pytz.timezone(channel.prestashop_timezone)
         sale_time_utc = pytz.utc.normalize(channel_tz.localize(sale_time))
 
         inv_address = Address.find_or_create_for_party_using_ps_data(
@@ -474,11 +474,11 @@ class SaleLine:
         channel = SaleChannel(Transaction().context['current_channel'])
         return {
             'quantity': 1,
-            'product': channel.shipping_product.id,
+            'product': channel.prestashop_shipping_product.id,
             'unit_price': Decimal(str(
                 order_record.total_shipping_tax_excl
             )).quantize(Decimal(10) ** - channel.company.currency.digits),
-            'unit': channel.shipping_product.default_uom.id,
+            'unit': channel.prestashop_shipping_product.default_uom.id,
             'description': 'Shipping Cost [Excl tax]',
         }
 

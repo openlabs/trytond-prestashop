@@ -62,7 +62,7 @@ class Channel:
         'Last Prestashop order export time', states=INVISIBLE_IF_NOT_PRESTASHOP,
         depends=['source']
     )
-    shipping_product = fields.Many2One(
+    prestashop_shipping_product = fields.Many2One(
         'product.product', 'Shipping Product', states=PRESTASHOP_STATES,
         domain=[
             ('type', '=', 'service'),
@@ -75,19 +75,19 @@ class Channel:
     #: to be converted to UTC
     #: Also in order to determine what orders are to be imported, we need
     #: to convert UTC to this timezone to ensure correct time interval
-    timezone = fields.Selection(
+    prestashop_timezone = fields.Selection(
         TIMEZONES, 'Timezone', translate=False, states=PRESTASHOP_STATES,
         depends=['source']
     )
 
     #: Allowed languages to be synced for the site
-    languages = fields.One2Many(
+    prestashop_languages = fields.One2Many(
         'prestashop.site.lang', 'channel', 'Languages',
         states=INVISIBLE_IF_NOT_PRESTASHOP, depends=['source']
     )
 
     #: The mapping between prestashop order states and tryton sale states
-    order_states = fields.One2Many(
+    prestashop_order_states = fields.One2Many(
         'prestashop.site.order_state', 'channel', 'Order States',
         states=INVISIBLE_IF_NOT_PRESTASHOP, depends=['source']
     )
@@ -96,7 +96,7 @@ class Channel:
     #: TODO: A provision to be implemented in future versions
     #: Also handle multiple payment methods where each will have different
     #: journal and account setups
-    handle_invoice = fields.Boolean(
+    prestashop_handle_invoice = fields.Boolean(
         'Handle Invoicing ?', states=INVISIBLE_IF_NOT_PRESTASHOP,
         depends=['source']
     )
@@ -211,7 +211,7 @@ class Channel:
         with Transaction().set_context(current_channel=channel.id):
 
             # If channel languages don't exist, then raise an error
-            if not channel.languages:
+            if not channel.prestashop_languages:
                 cls.raise_user_error('languages_not_imported')
 
             client = channel.get_prestashop_client()
@@ -289,12 +289,12 @@ class Channel:
         Sale = Pool().get('sale.sale')
         self.validate_prestashop_channel()
 
-        if not self.order_states:
+        if not self.prestashop_order_states:
             self.raise_user_error('order_states_not_imported')
 
         # Localize to the site timezone
         utc_time_now = datetime.utcnow()
-        site_tz = pytz.timezone(self.timezone)
+        site_tz = pytz.timezone(self.prestashop_timezone)
         time_now = site_tz.normalize(pytz.utc.localize(utc_time_now))
         client = self.get_prestashop_client()
 
