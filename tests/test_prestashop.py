@@ -264,8 +264,9 @@ class BaseTestCase(unittest.TestCase):
                 'price_list': self.price_list,
                 'invoice_method': 'manual',
                 'shipment_method': 'manual',
-                'shipping_product': shipping_product_template.products[0].id,
-                'timezone': 'UTC',
+                'prestashop_shipping_product':
+                    shipping_product_template.products[0].id,
+                'prestashop_timezone': 'UTC',
                 'payment_term': self.payment_term,
                 'default_account_expense':
                     self.get_account_by_kind('expense').id,
@@ -283,8 +284,9 @@ class BaseTestCase(unittest.TestCase):
                 'invoice_method': 'manual',
                 'shipment_method': 'manual',
                 'payment_term': self.payment_term,
-                'shipping_product': shipping_product_template.products[0].id,
-                'timezone': 'UTC',
+                'prestashop_shipping_product':
+                    shipping_product_template.products[0].id,
+                'prestashop_timezone': 'UTC',
                 'default_account_expense':
                     self.get_account_by_kind('expense').id,
                 'default_account_revenue':

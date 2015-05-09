@@ -3,6 +3,12 @@
 <tryton>
     <data>
 
+        <record model="ir.ui.view" id="sale_channel_view_form">
+            <field name="model">sale.channel</field>
+            <field name="inherit" ref="sale_channel.sale_channel_view_form"/>
+            <field name="name">sale_channel_form</field>
+        </record>
+
         <record model="ir.ui.view" id="prestashop_site_language_view_form">
             <field name="model">prestashop.site.lang</field>
             <field name="type">form</field>
