@@ -24,7 +24,7 @@ __all__ = [
     'PrestashopExportOrdersWizard',
     'PrestashopConnectionWizardView', 'PrestashopConnectionWizard',
 ]
-TIMEZONES = [(x, x) for x in pytz.common_timezones]
+TIMEZONES = [(None, '')] + [(x, x) for x in pytz.common_timezones]
 
 PRESTASHOP_STATES = {
     'required': Eval('source') == 'prestashop',
