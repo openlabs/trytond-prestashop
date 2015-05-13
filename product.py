@@ -319,7 +319,7 @@ class ProductPrestashop(ModelSQL, ModelView):
                 'duplicate_combination', {
                     'combination_id': self.prestashop_combination_id,
                     'template': self.product.template.name,
-                    'channel': self.channel.url,
+                    'channel': self.channel.prestashop_url,
                 }
             )
         # Check that this combination is unique throughout the channel if
@@ -334,7 +334,7 @@ class ProductPrestashop(ModelSQL, ModelView):
             self.raise_user_error(
                 'duplicate_combination_across_channel', {
                     'combination_id': self.prestashop_combination_id,
-                    'channel': self.channel.url,
+                    'channel': self.channel.prestashop_url,
                 }
             )
         return True
