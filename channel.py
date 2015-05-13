@@ -154,7 +154,9 @@ class Channel:
         if Transaction().context.get('ps_test'):
             return MockstaShopWebservice('Some URL', 'A Key')
 
-        return pystashop.PrestaShopWebservice(self.url, self.key)
+        return pystashop.PrestaShopWebservice(
+            self.prestashop_url, self.prestashop_key
+        )
 
     @classmethod
     @ModelView.button
