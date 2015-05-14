@@ -1,43 +1,42 @@
 <?xml version="1.0"?>
 <data>
-    <xpath expr="//notebook" position="inside">
-        <page id="prestashop_details" string="Prestashop" states="{'invisible': Not(Eval('source') == 'prestashop')}">
-              <label name="prestashop_url" />
-              <field name="prestashop_url" />
-              <label name="prestashop_key" />
-              <field name="prestashop_key" widget="password" />
-              <newline/>
-              <notebook>
-                  <page string="General" id="general">
-                      <label name="prestashop_timezone" />
-                      <field name="prestashop_timezone" />
-                      <label name="prestashop_shipping_product" />
-                      <field name="prestashop_shipping_product" />
-                      <label name="prestashop_handle_invoice" />
-                      <field name="prestashop_handle_invoice" />
-                  </page>
-                  <page string="Prestahsop Languages" id="prestashop_languages">
-                      <field name="prestashop_languages" mode="tree,form" colspan="4"/>
-                  </page>
-                  <page string="Prestahsop Order States" id="prestashop_order_states">
-                      <field name="prestashop_order_states" mode="tree,form" colspan="4"/>
-                  </page>
-                  <page string="Import / Export Time" id="prestashop_last_import_export_time">
-                      <label name="last_prestashop_order_import_time"/>
-                      <field name="last_prestashop_order_import_time"/>
-                      <label name="last_prestashop_order_import_time"/>
-                      <field name="last_prestashop_order_import_time"/>
-                  </page>
-              </notebook>
+    <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='connection']" position="inside">
+        <group id="Prestashop" states="{'invisible': Not(Eval('source') == 'prestashop')}" col="2" colspan="4">
+            <label name="prestashop_url" />
+            <field name="prestashop_url" />
+            <label name="prestashop_key" />
+            <field name="prestashop_key" widget="password" />
+        </group>          
+    </xpath>
+    <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='general']" position="inside">
+        <group id="general" states="{'invisible': Not(Eval('source') == 'prestashop')}">        
+            <label name="prestashop_timezone" />
+            <field name="prestashop_timezone" />
+            <label name="prestashop_shipping_product" />
+            <field name="prestashop_shipping_product" />
+            <label name="prestashop_handle_invoice" />
+            <field name="prestashop_handle_invoice" /> 
+        </group> 
+    </xpath>
+    <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='taxes']" position="after">
+        <page string="Prestahsop Languages" id="prestashop_languages" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+            <field name="prestashop_languages" mode="tree,form" colspan="4"/>
+        </page>
+        <page string="Prestahsop Order States" id="prestashop_order_states" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+            <field name="prestashop_order_states" mode="tree,form" colspan="4"/>
         </page>
     </xpath>
-    <xpath expr="/form[@string='Sale Channel']" position="inside">
-        <group id="prestashop_buttons" col="4" colspan="8"
-            states="{'invisible': Not(Eval('source') == 'prestashop')}">
-            <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="8"/>
-            <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
-            <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>
-            <button name="export_prestashop_orders" string="Export Prestashop Orders"/>
+    <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='import_export']/group[@id='channel_common_buttons']" position="before" >
+        <group id="prestashop_last_import_export_time" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+            <label name="last_prestashop_order_import_time"/>
+            <field name="last_prestashop_order_import_time"/>
+            <label name="last_prestashop_order_export_time"/>
+            <field name="last_prestashop_order_export_time"/>
         </group>
-    </xpath>   
+        <group id="prestashop_buttons" col="4" colspan="4" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+            <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
+            <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
+            <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>              
+        </group>
+    </xpath>
 </data>
