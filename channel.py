@@ -67,6 +67,7 @@ class Channel:
         domain=[
             ('type', '=', 'service'),
             ('template.type', '=', 'service'),
+            ('salable', '=', True),
         ], depends=['source']
     )
 
