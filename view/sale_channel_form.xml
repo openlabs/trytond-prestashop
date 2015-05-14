@@ -5,7 +5,7 @@
               <label name="prestashop_url" />
               <field name="prestashop_url" />
               <label name="prestashop_key" />
-              <field name="prestashop_key" />
+              <field name="prestashop_key" widget="password" />
               <newline/>
               <notebook>
                   <page string="General" id="general">
