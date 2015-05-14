@@ -29,7 +29,7 @@
                       <field name="last_prestashop_order_import_time"/>
                   </page>
               </notebook>
-        </page> 
+        </page>
     </xpath>
     <xpath expr="/form[@string='Sale Channel']" position="inside">
         <group id="prestashop_buttons" col="4" colspan="8"
