@@ -14,8 +14,9 @@ from mockstashop import MockstaShopWebservice
 from trytond.model import ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
-from trytond.wizard import Wizard, StateView, Button
+from trytond.wizard import Wizard, StateView, Button, StateAction
 from trytond.pyson import Eval
+from trytond.pyson import PYSONEncoder
 
 __metaclass__ = PoolMeta
 __all__ = [
@@ -139,8 +140,8 @@ class Channel:
             'test_prestashop_connection': {},
             'import_prestashop_languages': {},
             'import_prestashop_order_states': {},
-            'import_prestashop_orders': {},
-            'export_prestashop_orders': {},
+            'import_prestashop_orders_button': {},
+            'export_prestashop_orders_button': {},
         })
 
     def get_prestashop_client(self):
@@ -274,7 +275,7 @@ class Channel:
 
     @classmethod
     @ModelView.button_action('prestashop.wizard_prestashop_import_orders')
-    def import_prestashop_orders_button(cls, sites=None):
+    def import_prestashop_orders_button(cls, channels):
         """Dummy button to fire up the wizard for import of orders
 
         :param sites: The list of sites from which the orders are to be
@@ -344,7 +345,7 @@ class Channel:
 
     @classmethod
     @ModelView.button_action('prestashop.wizard_prestashop_export_orders')
-    def export_orders_button(cls, channels):
+    def export_prestashop_orders_button(cls, channels):
         """
         Dummy button to fire up the wizard for export of orders
         """
@@ -361,7 +362,7 @@ class Channel:
         Sale = Pool().get('sale.sale')
         Move = Pool().get('stock.move')
 
-        if not self.order_states:
+        if not self.prestashop_order_states:
             self.raise_user_error('order_states_not_imported')
 
         time_now = datetime.utcnow()
@@ -383,7 +384,10 @@ class Channel:
                     ('shipment', 'like', 'stock.shipment.out%')
                 ])
                 sales_to_export = Sale.search(['OR', [
-                    ('write_date', '>=', self.last_order_export_time),
+                    (
+                        'write_date', '>=',
+                        self.last_prestashop_order_export_time
+                    ),
                     ('channel', '=', self.id),
                 ], [
                     ('id', 'in', map(int, [m.sale for m in moves]))
@@ -430,7 +434,7 @@ class PrestashopImportOrdersWizardView(ModelView):
     'Prestashop Import Wizard View'
     __name__ = 'prestashop.import_orders.wizard.view'
 
-    orders_imported = fields.Integer('Orders Imported', readonly=True)
+    message = fields.Text('Message', readonly=True)
 
 
 class PrestashopImportOrdersWizard(Wizard):
@@ -441,15 +445,30 @@ class PrestashopImportOrdersWizard(Wizard):
         'prestashop.import_orders.wizard.view',
         'prestashop.prestashop_import_orders_wizard_view_form',
         [
-            Button('Ok', 'end', 'tryton-ok'),
+            Button('Cancel', 'end', 'tryton-cancel'),
+            Button('Continue', 'import_', 'tryton-ok', default=True),
         ]
     )
 
-    def default_start(self, fields):
-        """
-        Import the orders and display a confirmation message to the user
+    import_ = StateAction('sale.act_sale_form')
 
-        :param fields: Wizard fields
+    def default_start(self, data):
+        """
+        Sets default data for wizard
+        :param data: Wizard data
+        """
+        return {
+            'message':
+                "This wizard will import all sale orders placed on " +
+                "this channel after the Last Prestahsop Order Import " +
+                "Time. If Last Prestahsop Order Import Time is missing, " +
+                "then it will import all the orders from beginning of time. " +
+                "[This might be slow depending on number of orders]."
+        }
+
+    def do_import_(self, action):
+        """
+        Import the orders and display imported sale orders
         """
         SaleChannel = Pool().get('sale.channel')
 
@@ -457,9 +476,11 @@ class PrestashopImportOrdersWizard(Wizard):
 
         channel.validate_prestashop_channel()
 
-        return {
-            'orders_imported': len(channel.import_prestashop_orders())
-        }
+        orders = channel.import_prestashop_orders()
+
+        action['pyson_domain'] = PYSONEncoder().encode(
+            [('id', 'in', map(int, orders))])
+        return action, {}
 
 
 class PrestashopExportOrdersWizardView(ModelView):
