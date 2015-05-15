@@ -11,7 +11,7 @@ import unittest
 import trytond.tests.test_tryton
 from trytond.transaction import Transaction
 from trytond.exceptions import UserError
-from trytond.tests.test_tryton import DB_NAME, USER, CONTEXT
+from trytond.tests.test_tryton import POOL, DB_NAME, USER, CONTEXT
 
 from test_prestashop import get_objectified_xml, BaseTestCase
 
@@ -154,6 +154,40 @@ class TestSale(BaseTestCase):
                 self.assertEqual(len(self.Sale.search([
                     ('channel', '=', self.channel.id)
                 ])), 1)
+
+    def test_0030_check_prestashop_exception_order_total(self):
+        """
+        Check if exception is created when order total does not match
+        """
+        ChannelException = POOL.get('channel.exception')
+
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
+            # Call method to setup defaults
+            self.setup_defaults()
+
+            with Transaction().set_context(
+                self.User.get_preferences(context_only=True),
+                current_channel=self.channel.id, ps_test=True,
+            ):
+                self.setup_channels()
+
+                order_data = get_objectified_xml('orders', 1)
+
+                order_data.total_paid_tax_excl = 100
+
+                self.assertFalse(ChannelException.search([]))
+
+                sale = self.Sale.find_or_create_using_ps_data(order_data)
+
+                self.assertNotEqual(
+                    sale.total_amount, order_data.total_paid_tax_excl
+                )
+
+                self.assertTrue(sale.has_channel_exception)
+
+                self.assertTrue(ChannelException.search([]))
+
+                self.assertNotEqual(sale.state, 'done')
 
 
 def suite():

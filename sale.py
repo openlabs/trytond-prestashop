@@ -246,6 +246,7 @@ class Sale:
         SaleChannel = Pool().get('sale.channel')
         Currency = Pool().get('currency.currency')
         SiteOrderState = Pool().get('prestashop.site.order_state')
+        ChannelException = Pool().get('channel.exception')
 
         channel = SaleChannel(Transaction().context['current_channel'])
 
@@ -315,8 +316,17 @@ class Sale:
 
         sale, = cls.create([sale_data])
 
-        assert sale.total_amount == Decimal(str(
-            order_record.total_paid_tax_excl)), 'The order total do not match'
+        # Create channel exception if order total does not match
+        if sale.total_amount != Decimal(
+            str(order_record.total_paid_tax_excl)
+        ):
+            ChannelException.create([{
+                'origin': '%s,%s' % (sale.__name__, sale.id),
+                'log': 'Order total does not match.',
+                'channel': sale.channel.id,
+            }])
+
+            return sale
 
         sale.process_state_using_ps_data(ps_order_state)
 
@@ -328,6 +338,10 @@ class Sale:
         :param order_state: Site order state corresponding to ps order state
         """
         Sale = Pool().get('sale.sale')
+
+        # Do not process sale if sale has exception
+        if self.has_channel_exception:
+            return
 
         self.channel.get_prestashop_client()
 
