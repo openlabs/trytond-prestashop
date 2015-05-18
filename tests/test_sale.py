@@ -149,7 +149,7 @@ class TestSale(BaseTestCase):
                     ('channel', '=', self.channel.id)
                 ])), 0)
 
-                self.channel.import_prestashop_orders()
+                self.channel.import_orders()
 
                 self.assertEqual(len(self.Sale.search([
                     ('channel', '=', self.channel.id)

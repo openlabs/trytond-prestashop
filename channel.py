@@ -14,14 +14,12 @@ from mockstashop import MockstaShopWebservice
 from trytond.model import ModelView, fields
 from trytond.transaction import Transaction
 from trytond.pool import Pool, PoolMeta
-from trytond.wizard import Wizard, StateView, Button, StateAction
+from trytond.wizard import Wizard, StateView, Button
 from trytond.pyson import Eval
-from trytond.pyson import PYSONEncoder
 
 __metaclass__ = PoolMeta
 __all__ = [
-    'Channel', 'PrestashopImportOrdersWizardView',
-    'PrestashopImportOrdersWizard', 'PrestashopExportOrdersWizardView',
+    'Channel', 'PrestashopExportOrdersWizardView',
     'PrestashopExportOrdersWizard',
     'PrestashopConnectionWizardView', 'PrestashopConnectionWizard',
 ]
@@ -140,7 +138,6 @@ class Channel:
             'test_prestashop_connection': {},
             'import_prestashop_languages': {},
             'import_prestashop_order_states': {},
-            'import_prestashop_orders_button': {},
             'export_prestashop_orders_button': {},
         })
 
@@ -271,25 +268,21 @@ class Channel:
             ('source', '=', 'prestashop')
         ])
         for channel in channels:
-            channel.import_prestashop_orders()
+            channel.import_orders()
 
-    @classmethod
-    @ModelView.button_action('prestashop.wizard_prestashop_import_orders')
-    def import_prestashop_orders_button(cls, channels):
-        """Dummy button to fire up the wizard for import of orders
-
-        :param sites: The list of sites from which the orders are to be
-                      imported
+    def import_orders(self):
         """
-        pass
+        Downstream implementation of channel.import_orders
 
-    def import_prestashop_orders(self):
-        """Import orders for the current site from prestashop
-        Import only those orers which are updated after the
-        `last order import time` as set in the prestashop configuration
+        Import orders for the current prestashop channel
+        Import only those orders which are updated after the
+        `last prestashop order import time` as set in the prestashop channel
 
         :returns: The list of active records of sales imported
         """
+        if self.source != 'prestashop':
+            return super(Channel, self).import_orders()
+
         Sale = Pool().get('sale.sale')
         self.validate_prestashop_channel()
 
@@ -328,6 +321,8 @@ class Channel:
             })
             sales_imported = []
             for order in orders_to_import:
+
+                # TODO: Use import_order here
                 sales_imported.append(Sale.find_or_create_using_ps_data(order))
 
         return sales_imported
@@ -428,59 +423,6 @@ class PrestashopConnectionWizard(Wizard):
         :param data: Wizard data
         """
         return {}
-
-
-class PrestashopImportOrdersWizardView(ModelView):
-    'Prestashop Import Wizard View'
-    __name__ = 'prestashop.import_orders.wizard.view'
-
-    message = fields.Text('Message', readonly=True)
-
-
-class PrestashopImportOrdersWizard(Wizard):
-    'Prestashop Import Wizard'
-    __name__ = 'prestashop.import_orders.wizard'
-
-    start = StateView(
-        'prestashop.import_orders.wizard.view',
-        'prestashop.prestashop_import_orders_wizard_view_form',
-        [
-            Button('Cancel', 'end', 'tryton-cancel'),
-            Button('Continue', 'import_', 'tryton-ok', default=True),
-        ]
-    )
-
-    import_ = StateAction('sale.act_sale_form')
-
-    def default_start(self, data):
-        """
-        Sets default data for wizard
-        :param data: Wizard data
-        """
-        return {
-            'message':
-                "This wizard will import all sale orders placed on " +
-                "this channel after the Last Prestahsop Order Import " +
-                "Time. If Last Prestahsop Order Import Time is missing, " +
-                "then it will import all the orders from beginning of time. " +
-                "[This might be slow depending on number of orders]."
-        }
-
-    def do_import_(self, action):
-        """
-        Import the orders and display imported sale orders
-        """
-        SaleChannel = Pool().get('sale.channel')
-
-        channel = SaleChannel(Transaction().context['active_id'])
-
-        channel.validate_prestashop_channel()
-
-        orders = channel.import_prestashop_orders()
-
-        action['pyson_domain'] = PYSONEncoder().encode(
-            [('id', 'in', map(int, orders))])
-        return action, {}
 
 
 class PrestashopExportOrdersWizardView(ModelView):
