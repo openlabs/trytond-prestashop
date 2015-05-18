@@ -29,7 +29,7 @@
                       <field name="last_prestashop_order_import_time"/>
                   </page>
               </notebook>
-        </page> 
+        </page>
     </xpath>
     <xpath expr="/form[@string='Sale Channel']" position="inside">
         <group id="prestashop_buttons" col="4" colspan="8"
@@ -37,7 +37,6 @@
             <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="8"/>
             <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
             <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>
-            <button name="import_prestashop_orders" string="Import Prestashop Orders"/>
             <button name="export_prestashop_orders" string="Export Prestashop Orders"/>
         </group>
     </xpath>   
