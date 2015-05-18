@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<form string="Prestashop - Order Export Successful" col="2">
+    <label name="orders_exported"/>
+    <field name="orders_exported"/>
+</form>

@@ -76,42 +76,16 @@
             </field>
         </record>
 
-        <record model="ir.action.wizard" id="wizard_prestashop_import_orders">
-          <field name="name">Import Prestahsop Orders</field>
-            <field name="wiz_name">prestashop.import_orders.wizard</field>
-            <field name="model">sale.channel</field>
-        </record>
-
-        <record model="ir.ui.view" id="prestashop_import_orders_wizard_view_form">
-            <field name="model">prestashop.import_orders.wizard.view</field>
-            <field name="type">form</field>
-            <field name="arch" type="xml">
-                <![CDATA[
-                <form string="Prestashop - Order Import Successful" col="2">
-                  <label name="orders_imported"/>
-                  <field name="orders_imported"/>
-                </form>
-                ]]>
-            </field>
-        </record>
-
         <record model="ir.action.wizard" id="wizard_prestashop_export_orders">
           <field name="name">Export Orders to Prestashop</field>
-            <field name="wiz_name">channel.export_orders.wizard</field>
+            <field name="wiz_name">prestashop.export_orders.wizard</field>
             <field name="model">sale.channel</field>
         </record>
 
         <record model="ir.ui.view" id="prestashop_export_orders_wizard_view_form">
             <field name="model">prestashop.export_orders.wizard.view</field>
             <field name="type">form</field>
-            <field name="arch" type="xml">
-                <![CDATA[
-                <form string="Prestashop - Order Export Successful" col="2">
-                  <label name="orders_exported"/>
-                  <field name="orders_exported"/>
-                </form>
-                ]]>
-            </field>
+            <field name="name">wizard_export_prestashop_orders_form</field>
         </record>
 
         <record model="ir.action.wizard" id="wizard_prestashop_connection">
