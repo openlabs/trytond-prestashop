@@ -120,19 +120,6 @@
             <field name="group" ref="sale.group_sale_admin"/>
         </record>
 
-        <record model="ir.cron" id="cron_prestashop_import_orders">
-            <field name="name">Import Prestashop Orders</field>
-            <field name="request_user" ref="res.user_admin"/>
-            <field name="user" ref="user_prestashop"/>
-            <field name="active" eval="True"/>
-            <field name="interval_number">1</field>
-            <field name="interval_type">days</field>
-            <field name="number_calls">-1</field>
-            <field name="repeat_missed" eval="True"/>
-            <field name="model">sale.channel</field>
-            <field name="function">import_prestashop_orders_using_cron</field>
-        </record>
-
         <record model="ir.cron" id="cron_prestashop_export_orders">
             <field name="name">Export Orders To Prestashop</field>
             <field name="request_user" ref="res.user_admin"/>

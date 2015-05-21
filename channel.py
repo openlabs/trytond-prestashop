@@ -255,21 +255,6 @@ class Channel:
         ):
             cls.raise_user_error('wrong_url')
 
-    @classmethod
-    def import_prestashop_orders_using_cron(cls, channels):
-        """Import orders from prestashop
-
-        :param sites: The list of sites from which the orders are to be
-                      imported
-
-        ..note:: This method is usually called by the cron
-        """
-        channels = cls.search([
-            ('source', '=', 'prestashop')
-        ])
-        for channel in channels:
-            channel.import_orders()
-
     def import_orders(self):
         """
         Downstream implementation of channel.import_orders
