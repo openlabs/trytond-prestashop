@@ -421,8 +421,6 @@ class SaleLine:
         :param order_row_record: Objectified XML record sent by pystashop
         :returns: Sale line dictionary of values
         """
-        Product = Pool().get('product.product')
-        Template = Pool().get('product.template')
         SaleChannel = Pool().get('sale.channel')
 
         channel = SaleChannel(Transaction().context['current_channel'])
@@ -430,25 +428,8 @@ class SaleLine:
 
         client = channel.get_prestashop_client()
 
-        # If the product sold is a variant, then get product from
-        # product.product
-        if order_row_record.product_attribute_id.pyval != 0:
-            product = Product.get_product_using_ps_id(
-                order_row_record.product_attribute_id.pyval
-            ) or Product.find_or_create_using_ps_data(
-                client.combinations.get(
-                    order_row_record.product_attribute_id.pyval
-                )
-            )
-        else:
-            template = Template.get_template_using_ps_id(
-                order_row_record.product_id.pyval
-            ) or Template.find_or_create_using_ps_data(
-                client.products.get(
-                    order_row_record.product_id.pyval
-                )
-            )
-            product = template.products[0]
+        # Import product
+        product = channel.import_product(order_row_record)
 
         order_details = client.order_details.get(order_row_record.id.pyval)
 

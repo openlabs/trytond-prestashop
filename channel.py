@@ -384,6 +384,45 @@ class Channel:
 
         return sales_to_export
 
+    def import_product(self, order_row_record):
+        """
+        Import specific product for this prestashop channel
+        Downstream implementation for channel.import_product
+        """
+        Product = Pool().get('product.product')
+        Template = Pool().get('product.template')
+
+        # TODO: Products need to be searched using SKU instead of
+        # prestashop order ID
+
+        if self.source != 'prestashop':
+            return super(Channel, self).import_product(order_row_record)
+
+        client = self.get_prestashop_client()
+
+        # If the product sold is a variant, then get product from
+        # product.product
+        if order_row_record.product_attribute_id.pyval != 0:
+            product = Product.get_product_using_ps_id(
+                order_row_record.product_attribute_id.pyval
+            ) or Product.find_or_create_using_ps_data(
+                client.combinations.get(
+                    order_row_record.product_attribute_id.pyval
+                )
+            )
+
+        else:
+            template = Template.get_template_using_ps_id(
+                order_row_record.product_id.pyval
+            ) or Template.find_or_create_using_ps_data(
+                client.products.get(
+                    order_row_record.product_id.pyval
+                )
+            )
+            product = template.products[0]
+
+        return product
+
 
 class PrestashopConnectionWizardView(ModelView):
     'Prestashop Connection Wizard View'
