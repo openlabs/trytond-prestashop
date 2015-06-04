@@ -103,6 +103,8 @@ class BaseTestCase(unittest.TestCase):
         )
         self.PaymentTerm = POOL.get('account.invoice.payment_term')
         self.User = POOL.get('res.user')
+        self.ModelField = POOL.get('ir.model.field')
+        self.Property = POOL.get('ir.property')
 
     def _create_pricelists(self):
         """
@@ -268,10 +270,6 @@ class BaseTestCase(unittest.TestCase):
                     shipping_product_template.products[0].id,
                 'prestashop_timezone': 'UTC',
                 'payment_term': self.payment_term,
-                'default_account_expense':
-                    self.get_account_by_kind('expense').id,
-                'default_account_revenue':
-                    self.get_account_by_kind('revenue').id,
             }, {
                 'name': 'Channel 2',
                 'warehouse': warehouse.id,
@@ -287,10 +285,19 @@ class BaseTestCase(unittest.TestCase):
                 'prestashop_shipping_product':
                     shipping_product_template.products[0].id,
                 'prestashop_timezone': 'UTC',
-                'default_account_expense':
-                    self.get_account_by_kind('expense').id,
-                'default_account_revenue':
-                    self.get_account_by_kind('revenue').id,
+            }])
+
+            model_field, = self.ModelField.search([
+                ('name', '=', 'account_revenue'),
+                ('model.model', '=', 'product.template'),
+            ], order=[], limit=1)
+
+            self.Property.create([{
+                'value': '%s,%s' % (
+                    'account.account', self.get_account_by_kind('revenue').id
+                ),
+                'res': None,
+                'field': model_field.id,
             }])
 
             self.PaymentTerm.create([{

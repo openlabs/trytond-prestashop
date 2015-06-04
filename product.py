@@ -112,6 +112,7 @@ class Template:
         SiteLang = Pool().get('prestashop.site.lang')
 
         channel = SaleChannel(Transaction().context['current_channel'])
+        channel.validate_prestashop_channel()
 
         # The name of a product can be in multiple languages
         # If the name is in more than one language, create the record with
@@ -164,8 +165,6 @@ class Template:
                 'salable': True,
                 'default_uom': unit.id,
                 'sale_uom': unit.id,
-                'account_expense': channel.default_account_expense.id,
-                'account_revenue': channel.default_account_revenue.id,
                 'products': [('create', [variant_data])],
                 'prestashop_ids': [('create', [{
                     'prestashop_id': product_record.id.pyval,
