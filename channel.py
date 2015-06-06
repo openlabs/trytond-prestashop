@@ -50,17 +50,6 @@ class Channel:
         'Prestashop Key', states=PRESTASHOP_STATES, depends=['source']
     )
 
-    #: Last time at which the orders were imported from prestashop
-    last_prestashop_order_import_time = fields.DateTime(
-        'Last Prestashop Order Import Time', states=INVISIBLE_IF_NOT_PRESTASHOP,
-        depends=['source']
-    )
-
-    #: Last time at which the orders were exported to prestashop
-    last_prestashop_order_export_time = fields.DateTime(
-        'Last Prestashop order export time', states=INVISIBLE_IF_NOT_PRESTASHOP,
-        depends=['source']
-    )
     prestashop_shipping_product = fields.Many2One(
         'product.product', 'Shipping Product', states=PRESTASHOP_STATES,
         domain=[
@@ -281,16 +270,16 @@ class Channel:
         client = self.get_prestashop_client()
 
         with Transaction().set_context(current_channel=self.id):
-            if self.last_prestashop_order_import_time:
+            if self.last_order_import_time:
                 # In tryton all time stored is in UTC
                 # Convert the last import time to timezone of the site
-                last_prestashop_order_import_time = site_tz.normalize(
-                    pytz.utc.localize(self.last_prestashop_order_import_time)
+                last_order_import_time = site_tz.normalize(
+                    pytz.utc.localize(self.last_order_import_time)
                 )
                 orders_to_import = client.orders.get_list(
                     filters={
                         'date_upd': '{0},{1}'.format(
-                            last_prestashop_order_import_time.strftime(
+                            last_order_import_time.strftime(
                                 '%Y-%m-%d %H:%M:%S'
                             ),
                             time_now.strftime('%Y-%m-%d %H:%M:%S')
@@ -302,7 +291,7 @@ class Channel:
                 orders_to_import = client.orders.get_list(display='full')
 
             self.write([self], {
-                'last_prestashop_order_import_time': utc_time_now
+                'last_order_import_time': utc_time_now
             })
             sales_imported = []
             for order in orders_to_import:
@@ -350,7 +339,7 @@ class Channel:
         self.validate_prestashop_channel()
 
         with Transaction().set_context(current_channel=self.id):
-            if self.last_prestashop_order_export_time:
+            if self.last_order_export_time:
                 # Sale might not get updated for state changes in the related
                 # shipments.
                 # So first get the moves for outgoing shipments which are \
@@ -358,7 +347,7 @@ class Channel:
                 moves = Move.search([
                     (
                         'write_date', '>=',
-                        self.last_prestashop_order_export_time
+                        self.last_order_export_time
                     ),
                     ('sale.channel', '=', self.id),
                     ('shipment', 'like', 'stock.shipment.out%')
@@ -366,7 +355,7 @@ class Channel:
                 sales_to_export = Sale.search(['OR', [
                     (
                         'write_date', '>=',
-                        self.last_prestashop_order_export_time
+                        self.last_order_export_time
                     ),
                     ('channel', '=', self.id),
                 ], [
@@ -376,7 +365,7 @@ class Channel:
                 sales_to_export = Sale.search([('channel', '=', self.id)])
 
             self.write([self], {
-                'last_prestashop_order_export_time': time_now
+                'last_order_export_time': time_now
             })
 
             for sale in sales_to_export:

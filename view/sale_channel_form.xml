@@ -7,6 +7,7 @@
             <label name="prestashop_key" />
             <field name="prestashop_key" widget="password" />
         </group>          
+        <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
     </xpath>
     <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='general']" position="inside">
         <group id="general" states="{'invisible': Not(Eval('source') == 'prestashop')}">        
@@ -20,23 +21,12 @@
     </xpath>
     <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='taxes']" position="after">
         <page string="Prestahsop Languages" id="prestashop_languages" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+            <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
             <field name="prestashop_languages" mode="tree,form" colspan="4"/>
         </page>
         <page string="Prestahsop Order States" id="prestashop_order_states" states="{'invisible': Not(Eval('source') == 'prestashop')}">
+            <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>              
             <field name="prestashop_order_states" mode="tree,form" colspan="4"/>
         </page>
-    </xpath>
-    <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='import_export']/group[@id='channel_common_buttons']" position="before" >
-        <group id="prestashop_last_import_export_time" states="{'invisible': Not(Eval('source') == 'prestashop')}">
-            <label name="last_prestashop_order_import_time"/>
-            <field name="last_prestashop_order_import_time"/>
-            <label name="last_prestashop_order_export_time"/>
-            <field name="last_prestashop_order_export_time"/>
-        </group>
-        <group id="prestashop_buttons" col="4" colspan="4" states="{'invisible': Not(Eval('source') == 'prestashop')}">
-            <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
-            <button name="import_prestashop_languages" string="Import Prestashop Languages"/>
-            <button name="import_prestashop_order_states" string="Import Prestashop Order States"/>              
-        </group>
     </xpath>
 </data>
