@@ -6,8 +6,8 @@
             <field name="prestashop_url" />
             <label name="prestashop_key" />
             <field name="prestashop_key" widget="password" />
+            <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
         </group>          
-        <button name="test_prestashop_connection" string="Test Prestashop Connection" colspan="4"/>
     </xpath>
     <xpath expr="/form/notebook/page[@id='configuration']/notebook/page[@id='general']" position="inside">
         <group id="general" states="{'invisible': Not(Eval('source') == 'prestashop')}">        
